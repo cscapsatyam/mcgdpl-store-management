@@ -61,8 +61,29 @@ if page == "1. Home / Dashboard":
 
   if not st.session_state.current_df.empty:
     st.success("✅ డేటా ఆటోమేటిక్‌గా లోడ్ చేయబడింది!")
+    df = st.session_state.current_df.copy()
+
+    st.markdown("### 🔍 ఫిల్టర్ ఆప్షన్స్ (Dropdowns):")
+    col1, col2 = st.columns(2)
+
+    # 1. Supplier / Sendor Name Dropdown
+    supplier_col = "Supplier / Sendor Name"
+    if supplier_col in df.columns:
+      suppliers = ["అన్నీ (All)"] + list(df[supplier_col].dropna().unique())
+      selected_supplier = col1.selectbox("Supplier / Sendor Name ఎంచుకోండి:", suppliers)
+      if selected_supplier != "అన్నీ (All)":
+        df = df[df[supplier_col] == selected_supplier]
+
+    # 2. Type Reciept Dropdown
+    receipt_col = "Type Reciept"
+    if receipt_col in df.columns:
+      receipts = ["అన్నీ (All)"] + list(df[receipt_col].dropna().unique())
+      selected_receipt = col2.selectbox("Type Reciept ఎంచుకోండి:", receipts)
+      if selected_receipt != "అన్నీ (All)":
+        df = df[df[receipt_col] == selected_receipt]
+
     st.markdown("### 📊 లోడ్ అయిన డేటా వివరాలు:")
-    st.dataframe(st.session_state.current_df)
+    st.dataframe(df, hide_index=True)
   else:
     st.markdown(
         "### స్వాగతం! దయచేసి ఎక్సెల్ ఫైల్‌ను అప్‌లోడ్ చేయండి లేదా సైడ్‌బార్"
