@@ -87,31 +87,24 @@ elif page == "6. Invoice Wise Total Value":
     sup_col = "Supplier / Sendor Name"
     inv_col = "Invoice No"
 
-    # ఎక్సెల్ ఫైల్‌లో అమౌంట్ ఉండే కాలమ్ పేర్లను విస్తృతంగా వెతకడం
+    # మీ ఎక్సెల్ ఫైల్ ప్రకారం 'Inovice value' ని ఇక్కడ చేర్చడం జరిగింది
     possible_val_cols = [
+        "Inovice value",
+        "Invoice Value",
         "Total Amount",
         "Total Value",
         "Amount",
         "Value",
-        "Rate",
         "Total",
-        "Grand Total",
-        "Net Amount",
-        "Cost",
-        "Price",
-        "Total Price",
-        "Basic Amount",
     ]
     val_col = None
     for col in possible_val_cols:
-      # కేసెస్ (Capital/Small letters) తేడా ఉన్నా మ్యాచ్ అయ్యేలా చూడటం
       matched_cols = [c for c in df.columns if c.strip().lower() == col.lower()]
       if matched_cols:
         val_col = matched_cols[0]
         break
 
     if sup_col in df.columns and inv_col in df.columns:
-      # సప్లయర్ వైజ్ డ్రాప్-డౌన్ ఫిల్టర్
       suppliers_list = ["అన్నీ (All)"] + list(df[sup_col].dropna().unique())
       selected_sup_filter = st.selectbox(
           "🔍 సప్లయర్ వారీగా ఫిల్టర్ చేయండి:", suppliers_list
@@ -121,13 +114,11 @@ elif page == "6. Invoice Wise Total Value":
         df = df[df[sup_col] == selected_sup_filter]
 
       if val_col and val_col in df.columns:
-        # వాల్యూస్ కరెక్ట్ నంబర్‌గా మార్చడం
         df[val_col] = pd.to_numeric(
             df[val_col].astype(str).str.replace(r"[^\d.]", "", regex=True),
             errors="coerce",
         ).fillna(0)
 
-        # సప్లయర్ మరియు ఇన్వాయిస్ వారీగా టోటల్ సమ్ చేయడం
         summary_df = (
             df.groupby([sup_col, inv_col])[val_col]
             .sum()
@@ -142,11 +133,7 @@ elif page == "6. Invoice Wise Total Value":
             summary_df, hide_index=True, use_container_width=True, disabled=True
         )
       else:
-        st.warning(
-            "⚠️ మీ ఎక్సెల్ ఫైల్‌లో అమౌంట్ లేదా వాల్యూ కాలమ్ కనుగొనబడలేదు."
-            " మీ ఎక్సెల్ ఫైల్‌లోని కాలమ్స్ ఇక్కడ ఉన్నాయి: "
-            + str(list(df.columns))
-        )
+        st.warning("⚠️ ఎక్సెల్ ఫైల్‌లో వాల్యూ కాలమ్ కనుగొనబడలేదు.")
     else:
       st.error(
           "ఎక్సెల్ ఫైల్‌లో 'Supplier / Sendor Name' లేదా 'Invoice No' కాలమ్స్"
