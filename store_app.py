@@ -12,7 +12,7 @@ if "custom_suppliers" not in st.session_state:
 if "custom_materials" not in st.session_state:
   st.session_state.custom_materials = []
 
-# ఆటోమేటిక్‌గా గిథబ్ నుండి Book1.xlsx ఫైల్‌ని లోడ్ చేయడానికి ప్రయత్నిస్తుంది
+# ఆటోమేటిక్‌గా గిథబ్ నుండి Book1.xlsx ఫైల్‌ని లోడ్ చేయడం
 if st.session_state.current_df.empty:
   try:
     df_auto = pd.read_excel("Book1.xlsx", sheet_name=0)
@@ -37,26 +37,10 @@ if page == "1. Home / Dashboard":
   st.title("📦 Store Management System")
 
   if not st.session_state.current_df.empty:
-    st.success("✅ డేటా ఆటోమేటిక్‌గా లోడ్ చేయబడింది!")
     df = st.session_state.current_df.copy()
-
-    st.markdown(
-        "### 📊 లోడ్ అయిన డేటా వివరాలు (ఇంటరాక్టివ్ గ్రిడ్ & హెడర్ సెర్చ్):"
-    )
-
-    # పైన ఉన్న డ్రాప్-డౌన్స్ తీసేసి, నేరుగా టేబుల్ లోపే ఎక్సెల్ లాగా సెర్చ్/ఎడిట్ చేసుకునేలా st.data_editor వాడటం
-    st.data_editor(
-        df,
-        hide_index=True,
-        use_container_width=True,
-        disabled=True,  # డేటా మార్చకుండా కేవలం చూడటానికి మరియు హెడర్ ద్వారా సెర్చ్ చేయడానికి
-    )
-
+    # మెసేజ్‌లు మరియు హెడ్డింగ్‌లు పూర్తిగా తొలగించబడి, నేరుగా టేబుల్ మాత్రమే కనిపిస్తుంది
+    st.data_editor(df, hide_index=True, use_container_width=True, disabled=True)
   else:
-    st.markdown(
-        "### స్వాగతం! దయచేసి ఎక్సెల్ ఫైల్‌ను అప్‌లోడ్ చేయండి లేదా సైడ్‌బార్"
-        " ద్వారా ఇతర పేజీలకు వెళ్లండి."
-    )
     uploaded_file = st.file_uploader(
         "📁 మీ ఎక్సెల్ ఫైల్‌ని ఇక్కడ అప్‌లోడ్ చేయండి", type=["xlsx", "xls"]
     )
@@ -64,7 +48,6 @@ if page == "1. Home / Dashboard":
       try:
         df = pd.read_excel(uploaded_file, sheet_name=0)
         st.session_state.current_df = df
-        st.success("ఫైల్ విజయవంతంగా అప్‌లోడ్ చేయబడింది!")
         st.rerun()
       except Exception as e:
         st.error(f"ఎర్రర్: {e}")
