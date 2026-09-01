@@ -7,23 +7,32 @@ st.set_page_config(
     page_title="Enterprise Store Management System", layout="wide"
 )
 
-# Custom Styling with Professional ERP Look & Fixed Header Layout
+# Custom ERP Styling with Sticky Headers & Clean Layout
 st.markdown(
     """
     <style>
-    /* ఎంటైర్ మెయిన్ కంటైనర్ బ్యాక్‌గ్రౌండ్ */
     .main {
         background-color: #f4f6f9;
     }
-
-    /* Streamlit హెడర్ మరియు టాప్ బార్ ఫిక్స్‌డ్‌గా ఉండటానికి */
+    
+    /* Streamlit డిఫాల్ట్ హెడర్‌ని స్టికీగా మరియు టాప్‌లో ఫిక్స్‌డ్‌గా ఉంచడానికి */
     header[data-testid="stHeader"] {
         background-color: rgba(255, 255, 255, 0.95);
         backdrop-filter: blur(5px);
         z-index: 999;
     }
 
-    /* ERP లుక్ కోసం బటన్లు మరియు ఎలిమెంట్స్ స్టైలింగ్ */
+    /* మెయిన్ పేజీ టైటిల్స్ కదలకుండా ఒకే చోట ఫిక్స్‌డ్‌గా ఉండేలా (Sticky Headers) */
+    h1, h2, h3 {
+        position: sticky;
+        top: 0rem;
+        background-color: #f4f6f9;
+        z-index: 99;
+        padding-top: 0.5rem;
+        padding-bottom: 0.5rem;
+    }
+
+    /* ERP స్టైల్ బటన్లు */
     div.stButton > button {
         background-color: #0d6efd;
         color: white;
@@ -356,7 +365,7 @@ elif page == "7. Vendor Payments Entry":
 
             st.markdown("---")
 
-            # --- INVOICE-WISE CONSOLIDATED VIEW (FIXED: MATERIAL WISE TO INVOICE WISE) ---
+            # --- INVOICE-WISE CONSOLIDATED VIEW ---
             sup_invoices_raw = df[df[sup_col] == selected_summary_sup].copy()
 
             if inv_col in sup_invoices_raw.columns:
@@ -383,7 +392,7 @@ elif page == "7. Vendor Payments Entry":
               sup_invoices = sup_invoices_raw
 
             sup_invoices = sup_invoices.reset_index(drop=True)
-            sup_invoices.insert(0, "S.No", range(1, len(sup_invoices) + 1))
+            sup_invoices.insert(0, "S.No", range(1, len(sup_invoices + 1)))
 
             st.markdown(f"### 📂 Invoice-Wise Summary")
             with st.container(height=350):
