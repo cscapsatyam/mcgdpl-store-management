@@ -443,7 +443,7 @@ elif page == "7. Vendor Payments Entry":
             else:
               sup_invoices.insert(0, "S.No", range(1, len(sup_invoices) + 1))
 
-            st.markdown(f"### 📂 Invoice Line Items")
+            st.markdown(f"### 📂 Invoice History")
             st.data_editor(
                 sup_invoices,
                 hide_index=True,
@@ -576,7 +576,7 @@ elif page == "8. Vendor Statement & Ledger":
               unsafe_allow_html=True,
           )
 
-      st.subheader(f"📂 Invoice Line Items — {selected_supplier_det}")
+      st.subheader(f"📂 Invoice History — {selected_supplier_det}")
       st.data_editor(
           sup_invoices,
           hide_index=True,
