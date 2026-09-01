@@ -39,32 +39,35 @@ if page == "1. Home / Dashboard":
   if not st.session_state.current_df.empty:
     df = st.session_state.current_df.copy()
 
-    # డ్రాప్-డౌన్ ఫిల్టర్స్ సెక్షన్
-    col1, col2 = st.columns(2)
+    # ఫిల్టర్స్‌ని ఒక కంటైనర్‌లో పెట్టి పైన లాక్ చేయడానికి (Fixed / Sticky container)
+    filter_container = st.container()
+    with filter_container:
+      col1, col2 = st.columns(2)
+      supplier_col = "Supplier / Sendor Name"
+      if supplier_col in df.columns:
+        suppliers = ["అన్నీ (All)"] + list(df[supplier_col].dropna().unique())
+        selected_supplier = col1.selectbox(
+            "Supplier / Sendor Name ఫిల్టర్:", suppliers
+        )
+        if selected_supplier != "అన్నీ (All)":
+          df = df[df[supplier_col] == selected_supplier]
 
-    supplier_col = "Supplier / Sendor Name"
-    if supplier_col in df.columns:
-      suppliers = ["అన్నీ (All)"] + list(df[supplier_col].dropna().unique())
-      selected_supplier = col1.selectbox("Supplier / Sendor Name ఫిల్టర్:", suppliers)
-      if selected_supplier != "అన్నీ (All)":
-        df = df[df[supplier_col] == selected_supplier]
+      receipt_col = "Type Reciept"
+      if receipt_col in df.columns:
+        receipts = ["అన్నీ (All)"] + list(df[receipt_col].dropna().unique())
+        selected_receipt = col2.selectbox("Type Reciept ఫిల్టర్:", receipts)
+        if selected_receipt != "అన్నీ (All)":
+          df = df[df[receipt_col] == selected_receipt]
 
-    receipt_col = "Type Reciept"
-    if receipt_col in df.columns:
-      receipts = ["అన్నీ (All)"] + list(df[receipt_col].dropna().unique())
-      selected_receipt = col2.selectbox("Type Reciept ఫిల్టర్:", receipts)
-      if selected_receipt != "అన్నీ (All)":
-        df = df[df[receipt_col] == selected_receipt]
+      st.markdown("---")
 
-    st.markdown("---")
-
-    # మొత్తం షీట్ నిరంతరంగా (కంటిన్యూగా) కనిపించడానికి height సెట్ చేయడం జరిగింది
+    # డేటా టేబుల్ (మొత్తం డేటా కనిపించడానికి తగిన హైట్ మరియు స్క్రోలింగ్)
     st.data_editor(
         df,
         hide_index=True,
         use_container_width=True,
         disabled=True,
-        height=700,
+        height=650,
     )
   else:
     uploaded_file = st.file_uploader(
