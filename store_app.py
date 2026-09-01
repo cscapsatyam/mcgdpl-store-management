@@ -90,6 +90,13 @@ if page == "1. Home / Dashboard":
       if selected_receipt != "All":
         df = df[df[receipt_col] == selected_receipt]
 
+    # ഫిల్టర్ చేసిన తర్వాత S.No సరిగ్గా 1 నుండి ప్రారంభమయ్యేలా రీసెట్ చేయడం
+    df = df.reset_index(drop=True)
+    if "S.No" in df.columns:
+      df["S.No"] = range(1, len(df) + 1)
+    else:
+      df.insert(0, "S.No", range(1, len(df) + 1))
+
     st.markdown("---")
     col_btn1, col_btn2 = st.columns([6, 1])
     with col_btn2:
@@ -181,6 +188,10 @@ elif page == "6. Invoice Wise Total Value":
             .reset_index()
             .rename(columns={val_col: "Total Invoice Value"})
         )
+
+        # సమ్మరీ టేబుల్‌లో కూడా S.No ఆటోమేటిక్‌గా 1 నుండి వచ్చేలా చేయడం
+        summary_df = summary_df.reset_index(drop=True)
+        summary_df.insert(0, "S.No", range(1, len(summary_df) + 1))
 
         st.markdown("---")
         col_btn1, col_btn2 = st.columns([6, 1])
@@ -298,6 +309,10 @@ elif page == "7. Vendor Payments Entry":
       outstanding_df["Outstanding Amount"] = (
           outstanding_df["Total Invoice Amount"] - outstanding_df["Paid Amount"]
       )
+      
+      # అవుట్‌స్టాండింగ్ సమ్మరీ టేబుల్‌లో S.No యాడ్ చేయడం
+      outstanding_df = outstanding_df.reset_index(drop=True)
+      outstanding_df.insert(0, "S.No", range(1, len(outstanding_df) + 1))
 
       st.data_editor(
           outstanding_df,
@@ -309,8 +324,10 @@ elif page == "7. Vendor Payments Entry":
       if not st.session_state.payments_df.empty:
         st.markdown("---")
         st.subheader("📜 Complete Payment History Log:")
+        pay_hist_df = st.session_state.payments_df.reset_index(drop=True)
+        pay_hist_df.insert(0, "S.No", range(1, len(pay_hist_df) + 1))
         st.data_editor(
-            st.session_state.payments_df,
+            pay_hist_df,
             hide_index=True,
             use_container_width=True,
             disabled=True,
@@ -364,13 +381,19 @@ elif page == "8. Vendor Outstanding Detailed Report":
 
       st.markdown("---")
 
-      sup_invoices = df[df[sup_col] == selected_supplier_det].copy()
+      sup_invoices = df[df[sup_col] == selected_supplier_det].copy().reset_index(drop=True)
+      if "S.No" in sup_invoices.columns:
+        sup_invoices["S.No"] = range(1, len(sup_invoices) + 1)
+      else:
+        sup_invoices.insert(0, "S.No", range(1, len(sup_invoices) + 1))
+
       total_inv_amt = sup_invoices[val_col].sum()
 
       if not st.session_state.payments_df.empty:
         sup_payments = st.session_state.payments_df[
             st.session_state.payments_df["Supplier Name"] == selected_supplier_det
-        ].copy()
+        ].copy().reset_index(drop=True)
+        sup_payments.insert(0, "S.No", range(1, len(sup_payments) + 1))
         total_paid_amt = sup_payments["Paid Amount"].sum()
       else:
         sup_payments = pd.DataFrame()
