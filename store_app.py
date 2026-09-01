@@ -29,6 +29,7 @@ page = st.sidebar.radio(
         "3. New Record Creation",
         "4. All Suppliers List",
         "5. Material List",
+        "6. Invoice Wise Total Value",  # కొత్తగా యాడ్ చేసిన పేజీ
     ],
 )
 
@@ -39,7 +40,6 @@ if page == "1. Home / Dashboard":
   if not st.session_state.current_df.empty:
     df = st.session_state.current_df.copy()
 
-    # ఫిల్టర్స్‌ని పైన ఉంచడానికి
     col1, col2 = st.columns(2)
     supplier_col = "Supplier / Sendor Name"
     if supplier_col in df.columns:
@@ -56,11 +56,8 @@ if page == "1. Home / Dashboard":
         df = df[df[receipt_col] == selected_receipt]
 
     st.markdown("---")
-
-    # రోస్ సంఖ్యను బట్టి హైట్ ఆటోమేటిక్‌గా మారేలా సెట్ చేయడం
     calc_height = min(max(len(df) * 38 + 40, 150), 500)
 
-    # ఎలాంటి ఎర్రర్స్ రాకుండా స్టాండర్డ్ ఎడిటర్ డిస్‌ప్లే
     st.data_editor(
         df,
         hide_index=True,
@@ -79,3 +76,52 @@ if page == "1. Home / Dashboard":
         st.rerun()
       except Exception as e:
         st.error(f"ఎర్రర్: {e}")
+
+# ================= PAGE 6: INVOICE WISE TOTAL VALUE =================
+elif page == "6. Invoice Wise Total Value":
+  st.title("📊 Supplier & Invoice Wise Total Value Summary")
+
+  if not st.session_state.current_df.empty:
+    df = st.session_state.current_df.copy()
+
+    # కావలసిన కాలమ్స్ సరిగ్గా ఉన్నాయో లేదో చెక్ చేయడం
+    sup_col = "Supplier / Sendor Name"
+    inv_col = "Invoice No"
+    val_col = (
+        "Total Value"
+        if "Total Value" in df.columns
+        else (
+            "Value"
+            if "Value" in df.columns
+            else df.columns[-1]  # ఒకవేళ కాలమ్ పేరు వేరే ఉంటే చివరి కాలమ్ తీసుకోవడానికి
+        )
+    )
+
+    if sup_col in df.columns and inv_col in df.columns:
+      # నంబర్ కాలమ్‌గా మార్చడం (వాల్యూస్ సమ్ చేయడానికి)
+      if val_col in df.columns:
+        df[val_col] = pd.to_numeric(df[val_col], errors="fillna_0").fillna(0)
+
+        # సప్లయర్ మరియు ఇన్వాయిస్ నంబర్ వారీగా టోటల్ వాల్యూ గ్రూప్ చేయడం
+        summary_df = (
+            df.groupby([sup_col, inv_col])[val_col]
+            .sum()
+            .reset_index()
+            .rename(columns={val_col: "Total Invoice Value"})
+        )
+
+        st.markdown(
+            "### ప్రతి సప్లయర్ మరియు ఇన్వాయిస్ నంబర్ వారీగా మొత్తం విలువ:"
+        )
+        st.data_editor(
+            summary_df, hide_index=True, use_container_width=True, disabled=True
+        )
+      else:
+        st.warning("ఫైల్‌లో అమౌంట్/వాల్యూ కాలమ్ కనుగొనబడలేదు.")
+    else:
+      st.error(
+          "ఎక్సెల్ ఫైల్‌లో 'Supplier / Sendor Name' లేదా 'Invoice No' కాలమ్స్"
+          " లేవు."
+      )
+  else:
+    st.info("దయచేసి ముందుగా డాటా లోడ్ చేయండి.")
