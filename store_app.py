@@ -7,7 +7,7 @@ st.set_page_config(
     page_title="Enterprise Store Management System", layout="wide"
 )
 
-# Custom Styling with Professional ERP Look & A4 Border Print Layout
+# Custom Styling with Professional ERP Look & Sticky Horizontal Header
 st.markdown(
     """
     <style>
@@ -26,11 +26,22 @@ st.markdown(
         background-color: #0b5ed7;
         color: white;
     }
+    
+    /* --- STICKY ERP TOP HEADER & NAVIGATION BAR --- */
+    .erp-header-container {
+        position: sticky;
+        top: 0;
+        background-color: #f4f6f9;
+        z-index: 999;
+        padding-top: 10px;
+        padding-bottom: 5px;
+    }
+
     .erp-header {
         background-color: #ffffff;
         padding: 15px 20px;
         border-bottom: 2px solid #0d6efd;
-        margin-bottom: 20px;
+        margin-bottom: 10px;
         border-radius: 6px;
         box-shadow: 0 2px 4px rgba(0,0,0,0.05);
     }
@@ -131,7 +142,8 @@ if st.session_state.current_df.empty:
   except Exception as e:
     pass
 
-# --- ERP TOP HORIZONTAL NAVIGATION TABS ---
+# --- ERP TOP HORIZONTAL NAVIGATION TABS (STICKY WRAPPER) ---
+st.markdown('<div class="erp-header-container">', unsafe_allow_html=True)
 st.markdown(
     """
     <div class="erp-header">
@@ -156,6 +168,7 @@ page = st.radio(
     ],
     horizontal=True,
 )
+st.markdown("</div>", unsafe_allow_html=True)
 
 st.markdown("---")
 
@@ -398,7 +411,7 @@ elif page == "7. Vendor Payments Entry":
 
       st.markdown("---")
 
-      # --- TWO ACTION BUTTONS FOR POP-UPS (View Payment History removed) ---
+      # --- TWO ACTION BUTTONS FOR POP-UPS ---
       b_col1, b_col2 = st.columns(2)
 
       # 1. ADD NEW PAYMENT POPUP BUTTON
@@ -447,7 +460,7 @@ elif page == "7. Vendor Payments Entry":
 
           show_payment_popup()
 
-      # 2. VENDOR STATEMENT & LEDGER REPORT POPUP BUTTON (WITH PDF / PRINT OPTION)
+      # 2. VENDOR STATEMENT & LEDGER REPORT POPUP BUTTON
       with b_col2:
         if st.button("📑 Full Statement & Ledger", use_container_width=True):
 
