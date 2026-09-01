@@ -153,6 +153,7 @@ page = st.radio(
         "6. Invoice Wise Total Value",
         "7. Vendor Payments Entry",
         "8. Vendor Statement & Ledger",
+        "9. AKG Shutterings Ledger",
     ],
     horizontal=True,
 )
