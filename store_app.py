@@ -141,8 +141,7 @@ elif page == "6. Invoice Wise Total Value":
         )
 
         st.markdown(
-            "### ప్రతి సప్లయర్ మరియు ఇన్వాయిస్ నంబర్ వారీగా మొత్తం విలువ మరియు"
-            " ఇతర వివరాలు:"
+"
         )
         st.data_editor(
             summary_df, hide_index=True, use_container_width=True, disabled=True
