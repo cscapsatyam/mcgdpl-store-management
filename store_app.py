@@ -451,15 +451,18 @@ elif page == "7. Vendor Payments Entry":
               f"📜 Payment History Log — {selected_summary_sup}", width="large"
           )
           def show_history_popup():
-            if st.button("🖨️ Print / Save as PDF", key="print_history_popup"):
-              st.markdown(
-                  """
-                            <script>
-                            window.print();
-                            </script>
-                            """,
-                  unsafe_allow_html=True,
-              )
+            if st.button("🖨️ Print / Save as PDF", key="..."):
+  st.markdown(
+      """
+        <script>
+        setTimeout(function() {
+            window.print();
+        }, 500);
+        </script>
+        """,
+      unsafe_allow_html=True,
+  )  
+            
 
             st.markdown("---")
             if not st.session_state.payments_df.empty:
