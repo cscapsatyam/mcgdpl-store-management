@@ -359,7 +359,8 @@ elif page == "7. Vendor Payments Entry":
 elif page == "8. Vendor Outstanding Detailed Report":
   st.title("📑 Vendor Statement & Ledger Report")
   st.markdown(
-      
+      "Detailed ledger breakdown of invoices, disbursements, and net"
+      " outstanding balances."
   )
 
   if not st.session_state.current_df.empty:
@@ -444,7 +445,7 @@ elif page == "8. Vendor Outstanding Detailed Report":
               unsafe_allow_html=True,
           )
 
-      st.subheader(f"📂 {selected_supplier_det}")
+      st.subheader(f"📂 Invoice Line Items — {selected_supplier_det}")
       st.data_editor(
           sup_invoices,
           hide_index=True,
@@ -454,7 +455,7 @@ elif page == "8. Vendor Outstanding Detailed Report":
       )
 
       st.markdown("---")
-      st.subheader(f"💳 Payment Details — {selected_supplier_det}")
+      st.subheader(f"💳 Payment Disbursement Log — {selected_supplier_det}")
       if not sup_payments.empty:
         st.data_editor(
             sup_payments,
