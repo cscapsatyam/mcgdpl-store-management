@@ -7,13 +7,25 @@ st.set_page_config(
     page_title="Enterprise Store Management System", layout="wide"
 )
 
-# Custom Styling with Professional ERP Look & Sticky Horizontal Header
+# --- STRICT ERP SINGLE FRAME APP SHELL STYLING ---
 st.markdown(
     """
     <style>
-    .main {
+    /* బ్రౌజర్ మొత్తం పేజీ స్క్రోల్ కాకుండా ఒకే ఫ్రేమ్‌లో లాక్ చేయడానికి */
+    html, body, [data-testid="stAppViewContainer"] {
+        height: 100vh;
+        overflow: hidden !important;
         background-color: #f4f6f9;
     }
+
+    /* మెయిన్ కంటైనర్ ని ఒకే ఫ్రేమ్‌లో ఫిక్స్ చేయడం */
+    .main {
+        background-color: #f4f6f9;
+        height: 100vh;
+        overflow-y: auto !important;
+        padding-bottom: 50px;
+    }
+    
     div.stButton > button {
         background-color: #0d6efd;
         color: white;
@@ -22,12 +34,13 @@ st.markdown(
         border: none;
         font-weight: 500;
     }
+    
     div.stButton > button:hover {
         background-color: #0b5ed7;
         color: white;
     }
     
-    /* --- STICKY ERP TOP HEADER & NAVIGATION BAR --- */
+    /* టాప్ హెడర్ ఎప్పుడూ ఒకే చోట ఫిక్స్‌డ్‌గా ఉండటానికి */
     .erp-header-container {
         position: sticky;
         top: 0;
@@ -39,65 +52,11 @@ st.markdown(
 
     .erp-header {
         background-color: #ffffff;
-        padding: 15px 20px;
+        padding: 12px 20px;
         border-bottom: 2px solid #0d6efd;
         margin-bottom: 10px;
         border-radius: 6px;
         box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-    }
-
-    /* --- A4 SIZE PDF & PRINT STYLING WITH BORDER DESIGN --- */
-    @media print {
-        @page {
-            size: A4 portrait;
-            margin: 10mm;
-        }
-        
-        header, footer, nav, .stSidebar, div[data-testid="stSidebar"], button {
-            display: none !important;
-        }
-        
-        body {
-            background: white !important;
-            color: black !important;
-            font-family: Arial, sans-serif !important;
-            font-size: 11pt;
-        }
-        
-        .main, .block-container {
-            padding: 15px !important;
-            margin: 0 !important;
-            width: 100% !important;
-            border: 3px double #333333 !important;
-            box-sizing: border-box;
-        }
-
-        div[data-baseweb="modal"] {
-            position: absolute !important;
-            left: 0 !important;
-            top: 0 !important;
-            width: 100% !important;
-            background: white !important;
-            border: 3px double #333333 !important;
-            padding: 20px !important;
-        }
-
-        table {
-            width: 100% !important;
-            border-collapse: collapse !important;
-            margin-top: 10px;
-        }
-        th, td {
-            border: 1px solid #666666 !important;
-            padding: 6px 8px !important;
-            text-align: left;
-            font-size: 10pt;
-        }
-        th {
-            background-color: #e9ecef !important;
-            color: black !important;
-            -webkit-print-color-adjust: exact;
-        }
     }
     </style>
     """,
@@ -142,13 +101,13 @@ if st.session_state.current_df.empty:
   except Exception as e:
     pass
 
-# --- ERP TOP HORIZONTAL NAVIGATION TABS (STICKY WRAPPER) ---
+# --- ERP TOP HORIZONTAL NAVIGATION TABS (FIXED FRAME SHELL) ---
 st.markdown('<div class="erp-header-container">', unsafe_allow_html=True)
 st.markdown(
     """
     <div class="erp-header">
-        <h2 style='margin:0; color: #0d6efd;'>🏢 Enterprise Store Management ERP</h2>
-        <p style='margin:0; color: #6c757d; font-size: 14px;'>Centralized Material & Vendor Accounts Hub</p>
+        <h2 style='margin:0; color: #0d6efd; font-size: 22px;'>🏢 Enterprise Store Management ERP</h2>
+        <p style='margin:0; color: #6c757d; font-size: 13px;'>Centralized Material & Vendor Accounts Hub</p>
     </div>
     """,
     unsafe_allow_html=True,
@@ -216,7 +175,7 @@ if page == "1. Dashboard / Home":
             unsafe_allow_html=True,
         )
 
-    calc_height = min(max(len(df) * 38 + 40, 150), 500)
+    calc_height = min(max(len(df) * 38 + 40, 150), 450)
     st.data_editor(
         df,
         hide_index=True,
@@ -361,7 +320,6 @@ elif page == "7. Vendor Payments Entry":
 
       suppliers_unique = list(df[sup_col].dropna().unique())
 
-      # --- TOP SELECTOR FOR SUPPLIER ---
       selected_summary_sup = st.selectbox(
           "🔍 Select Vendor Account:",
           suppliers_unique,
@@ -370,7 +328,6 @@ elif page == "7. Vendor Payments Entry":
 
       st.markdown("---")
 
-      # --- CALCULATE FINANCIAL STANDING FOR SELECTED SUPPLIER ---
       sup_filtered_df = df[df[sup_col] == selected_summary_sup]
       total_inv_amt = sup_filtered_df[val_col].sum()
 
@@ -385,7 +342,6 @@ elif page == "7. Vendor Payments Entry":
 
       net_out = total_inv_amt - total_paid_amt
 
-      # Display Metrics
       m_col1, m_col2, m_col3 = st.columns(3)
       m_col1.metric("Total Invoice Amount", f"₹ {total_inv_amt:,.2f}")
       m_col2.metric("Total Paid Amount", f"₹ {total_paid_amt:,.2f}")
@@ -411,10 +367,8 @@ elif page == "7. Vendor Payments Entry":
 
       st.markdown("---")
 
-      # --- TWO ACTION BUTTONS FOR POP-UPS ---
       b_col1, b_col2 = st.columns(2)
 
-      # 1. ADD NEW PAYMENT POPUP BUTTON
       with b_col1:
         if st.button("➕ Add New Payment", use_container_width=True):
 
@@ -460,7 +414,6 @@ elif page == "7. Vendor Payments Entry":
 
           show_payment_popup()
 
-      # 2. VENDOR STATEMENT & LEDGER REPORT POPUP BUTTON
       with b_col2:
         if st.button("📑 Full Statement & Ledger", use_container_width=True):
 
@@ -653,7 +606,6 @@ elif page == "8. Vendor Statement & Ledger":
   else:
     st.info("Please load data records first.")
 
-# Handle Remaining Pages as Professional Placeholders
 elif page in [
     "2. Material Register View",
     "3. New Record Creation",
