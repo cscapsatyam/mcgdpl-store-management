@@ -57,8 +57,15 @@ if page == "1. Home / Dashboard":
         df = df[df[receipt_col] == selected_receipt]
 
     st.markdown("---")
-    # నేరుగా టేబుల్ ప్రదర్శన
-    st.data_editor(df, hide_index=True, use_container_width=True, disabled=True)
+
+    # మొత్తం షీట్ నిరంతరంగా (కంటిన్యూగా) కనిపించడానికి height సెట్ చేయడం జరిగింది
+    st.data_editor(
+        df,
+        hide_index=True,
+        use_container_width=True,
+        disabled=True,
+        height=700,
+    )
   else:
     uploaded_file = st.file_uploader(
         "📁 మీ ఎక్సెల్ ఫైల్‌ని ఇక్కడ అప్‌లోడ్ చేయండి", type=["xlsx", "xls"]
