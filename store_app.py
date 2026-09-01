@@ -29,7 +29,7 @@ page = st.sidebar.radio(
         "3. New Record Creation",
         "4. All Suppliers List",
         "5. Material List",
-        "6. Invoice Wise Total Value",  # కొత్తగా యాడ్ చేసిన పేజీ
+        "6. Invoice Wise Total Value",
     ],
 )
 
@@ -84,23 +84,32 @@ elif page == "6. Invoice Wise Total Value":
   if not st.session_state.current_df.empty:
     df = st.session_state.current_df.copy()
 
-    # కావలసిన కాలమ్స్ సరిగ్గా ఉన్నాయో లేదో చెక్ చేయడం
     sup_col = "Supplier / Sendor Name"
     inv_col = "Invoice No"
-    val_col = (
-        "Total Value"
-        if "Total Value" in df.columns
-        else (
-            "Value"
-            if "Value" in df.columns
-            else df.columns[-1]  # ఒకవేళ కాలమ్ పేరు వేరే ఉంటే చివరి కాలమ్ తీసుకోవడానికి
-        )
-    )
+
+    # మీ ఎక్సెల్ ఫైల్‌లో అమౌంట్/టోటల్ వాల్యూ ఉన్న సరైన కాలమ్‌ని గుర్తించడం
+    possible_val_cols = [
+        "Total Amount",
+        "Total Value",
+        "Amount",
+        "Value",
+        "Rate",
+        "Total",
+    ]
+    val_col = None
+    for col in possible_val_cols:
+      if col in df.columns:
+        val_col = col
+        break
+
+    if not val_col:
+      # ఏది లేకపోతే చివరి కాలమ్‌ని తీసుకోవడం
+      val_col = df.columns[-1]
 
     if sup_col in df.columns and inv_col in df.columns:
-      # నంబర్ కాలమ్‌గా మార్చడం (వాల్యూస్ సమ్ చేయడానికి)
       if val_col in df.columns:
-        df[val_col] = pd.to_numeric(df[val_col], errors="fillna_0").fillna(0)
+        # ఎర్రర్ రాకుండా సరిగ్గా నంబర్‌గా మార్చడం
+        df[val_col] = pd.to_numeric(df[val_col], errors="coerce").fillna(0)
 
         # సప్లయర్ మరియు ఇన్వాయిస్ నంబర్ వారీగా టోటల్ వాల్యూ గ్రూప్ చేయడం
         summary_df = (
