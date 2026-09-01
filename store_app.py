@@ -278,9 +278,9 @@ elif page == "7. Vendor Payments Entry":
           errors="coerce",
       ).fillna(0)
 
-      st.subheader("➕ New Payment Entry Form")
       suppliers_unique = list(df[sup_col].dropna().unique())
 
+      st.subheader("➕ New Payment Entry Form")
       with st.form("payment_form"):
         col_p1, col_p2 = st.columns(2)
         p_supplier = col_p1.selectbox("Select Supplier Name:", suppliers_unique)
@@ -314,38 +314,48 @@ elif page == "7. Vendor Payments Entry":
           )
 
       st.markdown("---")
-      st.subheader("📋 Supplier Financial Standing Summary:")
+      st.subheader("📋 Selected Supplier Financial Standing:")
 
-      total_inv_by_sup = (
-          df.groupby(sup_col)[val_col]
-          .sum()
-          .reset_index()
-          .rename(columns={val_col: "Total Invoice Amount"})
+      # డ్రాప్‌డౌన్ లేదా సెలెక్ట్ చేసుకున్న సప్లையర్ కోసం ఫిల్టర్
+      selected_summary_sup = st.selectbox(
+          "🔍 View Financial Summary for Supplier:",
+          suppliers_unique,
+          key="summary_sup_select",
       )
+
+      # ఆ ఒక్క సప్లையర్ డేటా మాత్రమే తీసుకోవడం
+      sup_filtered_df = df[df[sup_col] == selected_summary_sup]
+      total_inv_amt = sup_filtered_df[val_col].sum()
 
       if not st.session_state.payments_df.empty:
-        total_paid_by_sup = (
-            st.session_state.payments_df.groupby("Supplier Name")["Paid Amount"]
-            .sum()
-            .reset_index()
-            .rename(columns={"Supplier Name": sup_col})
-        )
-        outstanding_df = pd.merge(
-            total_inv_by_sup, total_paid_by_sup, on=sup_col, how="left"
-        ).fillna({"Paid Amount": 0})
+        sup_paid_df = st.session_state.payments_df[
+            st.session_state.payments_df["Supplier Name"]
+            == selected_summary_sup
+        ]
+        total_paid_amt = sup_paid_df["Paid Amount"].sum()
       else:
-        outstanding_df = total_inv_by_sup.copy()
-        outstanding_df["Paid Amount"] = 0
+        total_paid_amt = 0.0
 
-      outstanding_df["Outstanding Amount"] = (
-          outstanding_df["Total Invoice Amount"] - outstanding_df["Paid Amount"]
+      net_out = total_inv_amt - total_paid_amt
+
+      # సమ్మరీని నీట్‌గా మెట్రిక్స్ మరియు టేబుల్ రూపంలో చూపించడం
+      m_col1, m_col2, m_col3 = st.columns(3)
+      m_col1.metric("Total Invoice Amount", f"₹ {total_inv_amt:,.2f}")
+      m_col2.metric("Total Paid Amount", f"₹ {total_paid_amt:,.2f}")
+      m_col3.metric("Outstanding Balance", f"₹ {net_out:,.2f}")
+
+      summary_single_df = pd.DataFrame(
+          {
+              "Supplier Name": [selected_summary_sup],
+              "Total Invoice Amount": [total_inv_amt],
+              "Paid Amount": [total_paid_amt],
+              "Outstanding Amount": [net_out],
+          }
       )
-
-      outstanding_df = outstanding_df.reset_index(drop=True)
-      outstanding_df.insert(0, "S.No", range(1, len(outstanding_df) + 1))
+      summary_single_df.insert(0, "S.No", [1])
 
       st.data_editor(
-          outstanding_df,
+          summary_single_df,
           hide_index=True,
           use_container_width=True,
           disabled=True,
@@ -353,19 +363,31 @@ elif page == "7. Vendor Payments Entry":
 
       if not st.session_state.payments_df.empty:
         st.markdown("---")
-        st.subheader("📜 Complete Payment History Log:")
-        pay_hist_df = st.session_state.payments_df.reset_index(drop=True)
-        pay_hist_df.insert(0, "S.No", range(1, len(pay_hist_df) + 1))
-        st.data_editor(
-            pay_hist_df,
-            hide_index=True,
-            use_container_width=True,
-            disabled=True,
+        st.subheader(f"📜 Payment History Log — {selected_summary_sup}")
+        sup_hist = (
+            st.session_state.payments_df[
+                st.session_state.payments_df["Supplier Name"]
+                == selected_summary_sup
+            ]
+            .copy()
+            .reset_index(drop=True)
         )
+        if not sup_hist.empty:
+          sup_hist.insert(0, "S.No", range(1, len(sup_hist) + 1))
+          st.data_editor(
+              sup_hist,
+              hide_index=True,
+              use_container_width=True,
+              disabled=True,
+          )
+        else:
+          st.info(f"No payment history found for {selected_summary_sup}.")
     else:
       st.error("Required supplier or valuation columns missing from dataset.")
   else:
     st.info("Please load data records first.")
+      
+
 
 # ================= PAGE 8: VENDOR STATEMENT & LEDGER =================
 elif page == "8. Vendor Statement & Ledger":
