@@ -38,7 +38,26 @@ if page == "1. Home / Dashboard":
 
   if not st.session_state.current_df.empty:
     df = st.session_state.current_df.copy()
-    # మెసేజ్‌లు మరియు హెడ్డింగ్‌లు పూర్తిగా తొలగించబడి, నేరుగా టేబుల్ మాత్రమే కనిపిస్తుంది
+
+    # డ్రాప్-డౌన్ ఫిల్టర్స్ సెక్షన్
+    col1, col2 = st.columns(2)
+
+    supplier_col = "Supplier / Sendor Name"
+    if supplier_col in df.columns:
+      suppliers = ["అన్నీ (All)"] + list(df[supplier_col].dropna().unique())
+      selected_supplier = col1.selectbox("Supplier / Sendor Name ఫిల్టర్:", suppliers)
+      if selected_supplier != "అన్నీ (All)":
+        df = df[df[supplier_col] == selected_supplier]
+
+    receipt_col = "Type Reciept"
+    if receipt_col in df.columns:
+      receipts = ["అన్నీ (All)"] + list(df[receipt_col].dropna().unique())
+      selected_receipt = col2.selectbox("Type Reciept ఫిల్టర్:", receipts)
+      if selected_receipt != "అన్నీ (All)":
+        df = df[df[receipt_col] == selected_receipt]
+
+    st.markdown("---")
+    # నేరుగా టేబుల్ ప్రదర్శన
     st.data_editor(df, hide_index=True, use_container_width=True, disabled=True)
   else:
     uploaded_file = st.file_uploader(
