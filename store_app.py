@@ -7,32 +7,13 @@ st.set_page_config(
     page_title="Enterprise Store Management System", layout="wide"
 )
 
-# Custom ERP Styling with Sticky Headers & Clean Layout
+# Custom Styling with Professional ERP Look & A4 Border Print Layout
 st.markdown(
     """
     <style>
     .main {
         background-color: #f4f6f9;
     }
-    
-    /* Streamlit డిఫాల్ట్ హెడర్‌ని స్టికీగా మరియు టాప్‌లో ఫిక్స్‌డ్‌గా ఉంచడానికి */
-    header[data-testid="stHeader"] {
-        background-color: rgba(255, 255, 255, 0.95);
-        backdrop-filter: blur(5px);
-        z-index: 999;
-    }
-
-    /* మెయిన్ పేజీ టైటిల్స్ కదలకుండా ఒకే చోట ఫిక్స్‌డ్‌గా ఉండేలా (Sticky Headers) */
-    h1, h2, h3 {
-        position: sticky;
-        top: 0rem;
-        background-color: #f4f6f9;
-        z-index: 99;
-        padding-top: 0.5rem;
-        padding-bottom: 0.5rem;
-    }
-
-    /* ERP స్టైల్ బటన్లు */
     div.stButton > button {
         background-color: #0d6efd;
         color: white;
@@ -41,25 +22,88 @@ st.markdown(
         border: none;
         font-weight: 500;
     }
-
     div.stButton > button:hover {
         background-color: #0b5ed7;
         color: white;
+    }
+    .erp-header {
+        background-color: #ffffff;
+        padding: 15px 20px;
+        border-bottom: 2px solid #0d6efd;
+        margin-bottom: 20px;
+        border-radius: 6px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+
+    /* --- A4 SIZE PDF & PRINT STYLING WITH BORDER DESIGN --- */
+    @media print {
+        @page {
+            size: A4 portrait;
+            margin: 10mm;
+        }
+        
+        header, footer, nav, .stSidebar, div[data-testid="stSidebar"], button {
+            display: none !important;
+        }
+        
+        body {
+            background: white !important;
+            color: black !important;
+            font-family: Arial, sans-serif !important;
+            font-size: 11pt;
+        }
+        
+        .main, .block-container {
+            padding: 15px !important;
+            margin: 0 !important;
+            width: 100% !important;
+            border: 3px double #333333 !important;
+            box-sizing: border-box;
+        }
+
+        div[data-baseweb="modal"] {
+            position: absolute !important;
+            left: 0 !important;
+            top: 0 !important;
+            width: 100% !important;
+            background: white !important;
+            border: 3px double #333333 !important;
+            padding: 20px !important;
+        }
+
+        table {
+            width: 100% !important;
+            border-collapse: collapse !important;
+            margin-top: 10px;
+        }
+        th, td {
+            border: 1px solid #666666 !important;
+            padding: 6px 8px !important;
+            text-align: left;
+            font-size: 10pt;
+        }
+        th {
+            background-color: #e9ecef !important;
+            color: black !important;
+            -webkit-print-color-adjust: exact;
+        }
     }
     </style>
     """,
     unsafe_allow_html=True,
 )
 
-# --- FILE PATHS FOR PERSISTENCE ---
-PAYMENTS_FILE = "vendor_payments.csv"
+# Initialize Session State variables
+if "current_df" not in st.session_state:
+  st.session_state.current_df = pd.DataFrame()
 
-# Initialize Session States
+PAYMENTS_FILE = "payments_data.csv"
+
 if "payments_df" not in st.session_state:
   if os.path.exists(PAYMENTS_FILE):
     try:
       st.session_state.payments_df = pd.read_csv(PAYMENTS_FILE)
-    except Exception:
+    except Exception as e:
       st.session_state.payments_df = pd.DataFrame(
           columns=[
               "Supplier Name",
@@ -80,131 +124,192 @@ if "payments_df" not in st.session_state:
         ]
     )
 
-if "current_df" not in st.session_state:
-  st.session_state.current_df = pd.DataFrame()
+if st.session_state.current_df.empty:
+  try:
+    df_auto = pd.read_excel("Book1.xlsx", sheet_name=0)
+    st.session_state.current_df = df_auto
+  except Exception as e:
+    pass
 
-# --- SIDEBAR NAVIGATION ---
-st.sidebar.title("🏢 Enterprise ERP Navigation")
-page = st.sidebar.selectbox(
-    "Select Module:",
-    [
-        "1. Data Upload & Hub",
-        "2. Inventory Dashboard",
-        "3. Material Summary",
-        "4. Store Operations",
-        "5. Supplier Analytics",
-        "6. Export & Reports",
-        "7. Vendor Payments Entry",
-    ],
+# --- ERP TOP HORIZONTAL NAVIGATION TABS ---
+st.markdown(
+    """
+    <div class="erp-header">
+        <h2 style='margin:0; color: #0d6efd;'>🏢 Enterprise Store Management ERP</h2>
+        <p style='margin:0; color: #6c757d; font-size: 14px;'>Centralized Material & Vendor Accounts Hub</p>
+    </div>
+    """,
+    unsafe_allow_html=True,
 )
 
-st.sidebar.markdown("---")
-st.sidebar.info("System Status: 🟢 Online (ERP Active)")
+page = st.radio(
+    "Navigation Menu",
+    [
+        "1. Dashboard / Home",
+        "2. Material Register View",
+        "3. New Record Creation",
+        "4. All Suppliers List",
+        "5. Material List",
+        "6. Invoice Wise Total Value",
+        "7. Vendor Payments Entry",
+        "8. Vendor Statement & Ledger",
+    ],
+    horizontal=True,
+)
 
+st.markdown("---")
 
-# ================= PAGE 1: DATA UPLOAD & HUB =================
-if page == "1. Data Upload & Hub":
-  st.title("📂 Enterprise Data Ingestion Hub")
-  st.markdown(
-      "Upload your master Excel or CSV files to synchronize inventory and"
-      " financial records."
-  )
-
-  uploaded_file = st.file_uploader(
-      "Choose an Excel or CSV file", type=["xlsx", "csv"]
-  )
-
-  if uploaded_file is not None:
-    try:
-      if uploaded_file.name.endswith(".csv"):
-        st.session_state.current_df = pd.read_csv(uploaded_file)
-      else:
-        st.session_state.current_df = pd.read_excel(uploaded_file)
-
-      st.success("File successfully uploaded and loaded into ERP memory!")
-    except Exception as e:
-      st.error(f"Error loading file: {e}")
-
-  if not st.session_state.current_df.empty:
-    st.markdown("### 📊 Preview Loaded Dataset")
-    with st.container(height=400):
-      st.dataframe(
-          st.session_state.current_df, use_container_width=True, hide_index=True
-      )
-  else:
-    st.info(
-        "No dataset loaded yet. Please upload a file to begin operations."
-    )
-
-
-# ================= PAGE 2: INVENTORY DASHBOARD =================
-elif page == "2. Inventory Dashboard":
-  st.title("📈 Inventory Performance Dashboard")
-  st.markdown(
-      "High-level metrics and stock distribution across active store segments."
-  )
+# ================= PAGE 1: HOME =================
+if page == "1. Dashboard / Home":
+  st.title("📦 Store Management Dashboard")
+  st.markdown("Overview of store inventory and receipt records.")
 
   if not st.session_state.current_df.empty:
     df = st.session_state.current_df.copy()
-    st.metric("Total Records Loaded", len(df))
-    with st.container(height=450):
-      st.dataframe(df, use_container_width=True, hide_index=True)
+
+    col1, col2 = st.columns(2)
+    supplier_col = "Supplier / Sendor Name"
+    if supplier_col in df.columns:
+      suppliers = ["All"] + list(df[supplier_col].dropna().unique())
+      selected_supplier = col1.selectbox("Filter by Supplier Name:", suppliers)
+      if selected_supplier != "All":
+        df = df[df[supplier_col] == selected_supplier]
+
+    receipt_col = "Type Reciept"
+    if receipt_col in df.columns:
+      receipts = ["All"] + list(df[receipt_col].dropna().unique())
+      selected_receipt = col2.selectbox("Filter by Receipt Type:", receipts)
+      if selected_receipt != "All":
+        df = df[df[receipt_col] == selected_receipt]
+
+    df = df.reset_index(drop=True)
+    if "S.No" in df.columns:
+      df["S.No"] = range(1, len(df) + 1)
+    else:
+      df.insert(0, "S.No", range(1, len(df) + 1))
+
+    st.markdown("---")
+    col_btn1, col_btn2 = st.columns([6, 1])
+    with col_btn2:
+      if st.button("🖨️ Print / PDF"):
+        st.markdown(
+            """
+                <script>
+                setTimeout(function() {
+                    window.print();
+                }, 500);
+                </script>
+                """,
+            unsafe_allow_html=True,
+        )
+
+    calc_height = min(max(len(df) * 38 + 40, 150), 500)
+    st.data_editor(
+        df,
+        hide_index=True,
+        use_container_width=True,
+        disabled=True,
+        height=calc_height,
+    )
   else:
-    st.warning("Please upload data in Module 1 first.")
+    uploaded_file = st.file_uploader(
+        "📁 Upload Excel Data Source", type=["xlsx", "xls"]
+    )
+    if uploaded_file is not None:
+      try:
+        df = pd.read_excel(uploaded_file, sheet_name=0)
+        st.session_state.current_df = df
+        st.rerun()
+      except Exception as e:
+        st.error(f"Error loading file: {e}")
 
-
-# ================= PAGE 3: MATERIAL SUMMARY =================
-elif page == "3. Material Summary":
-  st.title("📦 Material Master Summary")
-  st.markdown("Consolidated material stock levels and pricing reports.")
+# ================= PAGE 6: INVOICE WISE TOTAL VALUE =================
+elif page == "6. Invoice Wise Total Value":
+  st.title("📊 Invoice Summary & Total Valuation")
+  st.markdown("Aggregated financial view categorized by supplier and invoice.")
 
   if not st.session_state.current_df.empty:
-    with st.container(height=450):
-      st.dataframe(
-          st.session_state.current_df, use_container_width=True, hide_index=True
+    df = st.session_state.current_df.copy()
+    sup_col = "Supplier / Sendor Name"
+    inv_col = "Invoice No"
+
+    possible_val_cols = [
+        "Inovice value",
+        "Invoice Value",
+        "Total Amount",
+        "Total Value",
+        "Amount",
+        "Value",
+        "Total",
+    ]
+    val_col = None
+    for col in possible_val_cols:
+      matched_cols = [c for c in df.columns if c.strip().lower() == col.lower()]
+      if matched_cols:
+        val_col = matched_cols[0]
+        break
+
+    if sup_col in df.columns and inv_col in df.columns:
+      suppliers_list = ["All"] + list(df[sup_col].dropna().unique())
+      selected_sup_filter = st.selectbox(
+          "🔍 Filter by Supplier:", suppliers_list
       )
+
+      if selected_sup_filter != "All":
+        df = df[df[sup_col] == selected_sup_filter]
+
+      if val_col and val_col in df.columns:
+        df[val_col] = pd.to_numeric(
+            df[val_col].astype(str).str.replace(r"[^\d.]", "", regex=True),
+            errors="coerce",
+        ).fillna(0)
+
+        optional_cols = [
+            "Store Entry No",
+            "Invoice Date",
+            "GRN No",
+            "GRN Date",
+        ]
+        available_extra_cols = [
+            c for c in optional_cols if c in df.columns
+        ]
+        group_cols = [sup_col, inv_col] + available_extra_cols
+
+        summary_df = (
+            df.groupby(group_cols)[val_col]
+            .sum()
+            .reset_index()
+            .rename(columns={val_col: "Total Invoice Value"})
+        )
+
+        summary_df = summary_df.reset_index(drop=True)
+        summary_df.insert(0, "S.No", range(1, len(summary_df) + 1))
+
+        st.markdown("---")
+        col_btn1, col_btn2 = st.columns([6, 1])
+        with col_btn2:
+          if st.button("🖨️ Print / PDF", key="print_btn_page6"):
+            st.markdown(
+                """
+                    <script>
+                    setTimeout(function() {
+                        window.print();
+                    }, 500);
+                    </script>
+                    """,
+                unsafe_allow_html=True,
+            )
+
+        st.markdown("### Consolidated Invoice Valuation Table:")
+        st.data_editor(
+            summary_df, hide_index=True, use_container_width=True, disabled=True
+        )
+      else:
+        st.warning("⚠️ Valuation column could not be identified.")
+    else:
+      st.error("Required columns ('Supplier' or 'Invoice No') are missing.")
   else:
-    st.info("No data available.")
-
-
-# ================= PAGE 4: STORE OPERATIONS =================
-elif page == "4. Store Operations":
-  st.title("🏭 Store Operations & Logs")
-  st.markdown("Daily inwards, outwards, and site movement registers.")
-
-  if not st.session_state.current_df.empty:
-    with st.container(height=450):
-      st.dataframe(
-          st.session_state.current_df, use_container_width=True, hide_index=True
-      )
-  else:
-    st.info("No operational data loaded.")
-
-
-# ================= PAGE 5: SUPPLIER ANALYTICS =================
-elif page == "5. Supplier Analytics":
-  st.title("📊 Supplier Performance & Ledger Analytics")
-  st.markdown("Analyze supplier fulfillment rates, values, and standing.")
-
-  if not st.session_state.current_df.empty:
-    with st.container(height=450):
-      st.dataframe(
-          st.session_state.current_df, use_container_width=True, hide_index=True
-      )
-  else:
-    st.info("Please load dataset first.")
-
-
-# ================= PAGE 6: EXPORT & REPORTS =================
-elif page == "6. Export & Reports":
-  st.title("📑 Enterprise Reporting & Export Center")
-  st.markdown("Download formatted statements and financial summaries.")
-
-  if not st.session_state.current_df.empty:
-    st.success("Data ready for export generation.")
-  else:
-    st.info("No data available for export.")
-
+    st.info("Please load data records first.")
 
 # ================= PAGE 7: VENDOR PAYMENTS ENTRY =================
 elif page == "7. Vendor Payments Entry":
@@ -293,7 +398,7 @@ elif page == "7. Vendor Payments Entry":
 
       st.markdown("---")
 
-      # --- TWO ACTION BUTTONS FOR POP-UPS ---
+      # --- TWO ACTION BUTTONS FOR POP-UPS (View Payment History removed) ---
       b_col1, b_col2 = st.columns(2)
 
       # 1. ADD NEW PAYMENT POPUP BUTTON
@@ -342,7 +447,7 @@ elif page == "7. Vendor Payments Entry":
 
           show_payment_popup()
 
-      # 2. VENDOR STATEMENT & LEDGER REPORT POPUP BUTTON
+      # 2. VENDOR STATEMENT & LEDGER REPORT POPUP BUTTON (WITH PDF / PRINT OPTION)
       with b_col2:
         if st.button("📑 Full Statement & Ledger", use_container_width=True):
 
@@ -364,44 +469,23 @@ elif page == "7. Vendor Payments Entry":
               )
 
             st.markdown("---")
-
-            # --- INVOICE-WISE CONSOLIDATED VIEW ---
-            sup_invoices_raw = df[df[sup_col] == selected_summary_sup].copy()
-
-            if inv_col in sup_invoices_raw.columns:
-              optional_cols = [
-                  "Store Entry No",
-                  "Invoice Date",
-                  "GRN No",
-                  "GRN Date",
-                  "Vechile Number",
-                  "Type Reciept",
-              ]
-              available_extra = [
-                  c for c in optional_cols if c in sup_invoices_raw.columns
-              ]
-              group_cols = [inv_col] + available_extra
-
-              sup_invoices = (
-                  sup_invoices_raw.groupby(group_cols)[val_col]
-                  .sum()
-                  .reset_index()
-                  .rename(columns={val_col: "Total Invoice Value"})
-              )
+            sup_invoices = (
+                df[df[sup_col] == selected_summary_sup]
+                .copy()
+                .reset_index(drop=True)
+            )
+            if "S.No" in sup_invoices.columns:
+              sup_invoices["S.No"] = range(1, len(sup_invoices) + 1)
             else:
-              sup_invoices = sup_invoices_raw
+              sup_invoices.insert(0, "S.No", range(1, len(sup_invoices) + 1))
 
-            sup_invoices = sup_invoices.reset_index(drop=True)
-            sup_invoices.insert(0, "S.No", range(1, len(sup_invoices + 1)))
-
-            st.markdown(f"### 📂 Invoice-Wise Summary")
-            with st.container(height=350):
-              st.data_editor(
-                  sup_invoices,
-                  hide_index=True,
-                  use_container_width=True,
-                  disabled=True,
-              )
+            st.markdown(f"### 📂 Invoice Line Items")
+            st.data_editor(
+                sup_invoices,
+                hide_index=True,
+                use_container_width=True,
+                disabled=True,
+            )
 
             st.markdown("---")
             st.markdown(f"### 💳 Payment Disbursement Log")
@@ -419,13 +503,12 @@ elif page == "7. Vendor Payments Entry":
                   .reset_index(drop=True)
               )
               sup_payments.insert(0, "S.No", range(1, len(sup_payments) + 1))
-              with st.container(height=250):
-                st.data_editor(
-                    sup_payments,
-                    hide_index=True,
-                    use_container_width=True,
-                    disabled=True,
-                )
+              st.data_editor(
+                  sup_payments,
+                  hide_index=True,
+                  use_container_width=True,
+                  disabled=True,
+              )
             else:
               st.info(
                   "No payment transactions recorded for this vendor yet."
@@ -437,3 +520,135 @@ elif page == "7. Vendor Payments Entry":
       st.error("Required supplier or valuation columns missing from dataset.")
   else:
     st.info("Please load data records first.")
+
+# ================= PAGE 8: VENDOR STATEMENT & LEDGER =================
+elif page == "8. Vendor Statement & Ledger":
+  st.title("📑 Vendor Statement & Ledger Report")
+  st.markdown(
+      "Detailed ledger breakdown of invoices, disbursements, and net"
+      " outstanding balances."
+  )
+
+  if not st.session_state.current_df.empty:
+    df = st.session_state.current_df.copy()
+    sup_col = "Supplier / Sendor Name"
+    inv_col = "Invoice No"
+
+    possible_val_cols = [
+        "Inovice value",
+        "Invoice Value",
+        "Total Amount",
+        "Total Value",
+        "Amount",
+        "Value",
+        "Total",
+    ]
+    val_col = None
+    for col in possible_val_cols:
+      matched_cols = [c for c in df.columns if c.strip().lower() == col.lower()]
+      if matched_cols:
+        val_col = matched_cols[0]
+        break
+
+    if sup_col in df.columns and val_col:
+      df[val_col] = pd.to_numeric(
+          df[val_col].astype(str).str.replace(r"[^\d.]", "", regex=True),
+          errors="coerce",
+      ).fillna(0)
+
+      suppliers_list = list(df[sup_col].dropna().unique())
+      selected_supplier_det = st.selectbox(
+          "🔍 Select Vendor Account for Statement:",
+          suppliers_list,
+          key="det_sup_select",
+      )
+
+      st.markdown("---")
+
+      sup_invoices = (
+          df[df[sup_col] == selected_supplier_det].copy().reset_index(drop=True)
+      )
+      if "S.No" in sup_invoices.columns:
+        sup_invoices["S.No"] = range(1, len(sup_invoices) + 1)
+      else:
+        sup_invoices.insert(0, "S.No", range(1, len(sup_invoices) + 1))
+
+      total_inv_amt = sup_invoices[val_col].sum()
+
+      if not st.session_state.payments_df.empty:
+        sup_payments = (
+            st.session_state.payments_df[
+                st.session_state.payments_df["Supplier Name"]
+                == selected_supplier_det
+            ]
+            .copy()
+            .reset_index(drop=True)
+        )
+        sup_payments.insert(0, "S.No", range(1, len(sup_payments) + 1))
+        total_paid_amt = sup_payments["Paid Amount"].sum()
+      else:
+        sup_payments = pd.DataFrame()
+        total_paid_amt = 0.0
+
+      net_outstanding = total_inv_amt - total_paid_amt
+
+      col_m1, col_m2, col_m3 = st.columns(3)
+      col_m1.metric("📦 Total Invoice Value", f"₹ {total_inv_amt:,.2f}")
+      col_m2.metric("💳 Total Paid Value", f"₹ {total_paid_amt:,.2f}")
+      col_m3.metric("⚠️ Net Outstanding Balance", f"₹ {net_outstanding:,.2f}")
+
+      st.markdown("---")
+
+      col_b1, col_b2 = st.columns([6, 1])
+      with col_b2:
+        if st.button("🖨️ Print / PDF", key="print_btn_page8"):
+          st.markdown(
+              """
+                  <script>
+                  setTimeout(function() {
+                      window.print();
+                  }, 500);
+                  </script>
+                  """,
+              unsafe_allow_html=True,
+          )
+
+      st.subheader(f"📂 Invoice Line Items — {selected_supplier_det}")
+      st.data_editor(
+          sup_invoices,
+          hide_index=True,
+          use_container_width=True,
+          disabled=True,
+          key="det_inv_table",
+      )
+
+      st.markdown("---")
+      st.subheader(f"💳 Payment Disbursement Log — {selected_supplier_det}")
+      if not sup_payments.empty:
+        st.data_editor(
+            sup_payments,
+            hide_index=True,
+            use_container_width=True,
+            disabled=True,
+            key="det_pay_table",
+        )
+      else:
+        st.info("No payment transactions recorded for this vendor.")
+
+    else:
+      st.error("Required dataset columns not detected.")
+  else:
+    st.info("Please load data records first.")
+
+# Handle Remaining Pages as Professional Placeholders
+elif page in [
+    "2. Material Register View",
+    "3. New Record Creation",
+    "4. All Suppliers List",
+    "5. Material List",
+]:
+  st.title(page)
+  st.markdown(
+      "This module is configured to standard corporate template parameters."
+  )
+  st.info("Module ready for operational deployment.")
