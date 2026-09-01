@@ -289,38 +289,46 @@ elif page == "7. Vendor Payments Entry":
 
       suppliers_unique = list(df[sup_col].dropna().unique())
 
-      st.subheader("➕ New Payment Entry Form")
-      with st.form("payment_form"):
-        col_p1, col_p2 = st.columns(2)
-        p_supplier = col_p1.selectbox("Select Supplier Name:", suppliers_unique)
-        p_date = col_p2.date_input("Payment Date:")
+      # --- POP-UP MODAL WINDOW FOR NEW PAYMENT ENTRY ---
+      if st.button("➕ Add New Payment Entry", type="primary"):
+        @st.dialog("➕ New Payment Entry Form", width="large")
+        def show_payment_popup():
+          with st.form("payment_form_popup"):
+            col_p1, col_p2 = st.columns(2)
+            p_supplier = col_p1.selectbox(
+                "Select Supplier Name:", suppliers_unique
+            )
+            p_date = col_p2.date_input("Payment Date:")
 
-        col_p3, col_p4 = st.columns(2)
-        p_ref = col_p3.text_input("Reference No (UTR / Cheque / Ref ID):")
-        p_amount = col_p4.number_input(
-            "Paid Amount (₹):", min_value=0.0, step=100.0
-        )
-        p_remarks = st.text_input("Remarks / Description:")
+            col_p3, col_p4 = st.columns(2)
+            p_ref = col_p3.text_input("Reference No (UTR / Cheque / Ref ID):")
+            p_amount = col_p4.number_input(
+                "Paid Amount (₹):", min_value=0.0, step=100.0
+            )
+            p_remarks = st.text_input("Remarks / Description:")
 
-        submitted = st.form_submit_button("Save Payment Record")
-        if submitted:
-          new_payment = pd.DataFrame(
-              {
-                  "Supplier Name": [p_supplier],
-                  "Payment Date": [str(p_date)],
-                  "Reference No": [p_ref],
-                  "Paid Amount": [p_amount],
-                  "Remarks": [p_remarks],
-              }
-          )
-          st.session_state.payments_df = pd.concat(
-              [st.session_state.payments_df, new_payment], ignore_index=True
-          )
-          st.session_state.payments_df.to_csv(PAYMENTS_FILE, index=False)
-          st.success(
-              f"Successfully recorded payment of ₹ {p_amount:,.2f} for"
-              f" {p_supplier} and saved permanently!"
-          )
+            submitted = st.form_submit_button("Save Payment Record")
+            if submitted:
+              new_payment = pd.DataFrame(
+                  {
+                      "Supplier Name": [p_supplier],
+                      "Payment Date": [str(p_date)],
+                      "Reference No": [p_ref],
+                      "Paid Amount": [p_amount],
+                      "Remarks": [p_remarks],
+                  }
+              )
+              st.session_state.payments_df = pd.concat(
+                  [st.session_state.payments_df, new_payment], ignore_index=True
+              )
+              st.session_state.payments_df.to_csv(PAYMENTS_FILE, index=False)
+              st.success(
+                  f"Successfully recorded payment of ₹ {p_amount:,.2f} for"
+                  f" {p_supplier}!"
+              )
+              st.rerun()
+
+        show_payment_popup()
 
       st.markdown("---")
       st.subheader("📋 Selected Supplier Financial Standing:")
@@ -355,7 +363,7 @@ elif page == "7. Vendor Payments Entry":
               "Supplier Name": [selected_summary_sup],
               "Total Invoice Amount": [total_inv_amt],
               "Paid Amount": [total_paid_amt],
-              "Outstanding Amount": [net_out],
+              "Outstanding Balance": [net_out],
           }
       )
       summary_single_df.insert(0, "S.No", [1])
@@ -402,6 +410,7 @@ elif page == "7. Vendor Payments Entry":
       st.error("Required supplier or valuation columns missing from dataset.")
   else:
     st.info("Please load data records first.")
+
 
 # ================= PAGE 8: VENDOR STATEMENT & LEDGER =================
 elif page == "8. Vendor Statement & Ledger":
