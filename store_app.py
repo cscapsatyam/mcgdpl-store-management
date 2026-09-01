@@ -39,35 +39,33 @@ if page == "1. Home / Dashboard":
   if not st.session_state.current_df.empty:
     df = st.session_state.current_df.copy()
 
-    # ఫిల్టర్స్‌ని ఒక కంటైనర్‌లో పెట్టి పైన లాక్ చేయడానికి (Fixed / Sticky container)
-    filter_container = st.container()
-    with filter_container:
-      col1, col2 = st.columns(2)
-      supplier_col = "Supplier / Sendor Name"
-      if supplier_col in df.columns:
-        suppliers = ["అన్నీ (All)"] + list(df[supplier_col].dropna().unique())
-        selected_supplier = col1.selectbox(
-            "Supplier / Sendor Name ఫిల్టర్:", suppliers
-        )
-        if selected_supplier != "అన్నీ (All)":
-          df = df[df[supplier_col] == selected_supplier]
+    # ఫిల్టర్స్‌ని పైన ఉంచడానికి
+    col1, col2 = st.columns(2)
+    supplier_col = "Supplier / Sendor Name"
+    if supplier_col in df.columns:
+      suppliers = ["అన్నీ (All)"] + list(df[supplier_col].dropna().unique())
+      selected_supplier = col1.selectbox("Supplier / Sendor Name ఫిల్టర్:", suppliers)
+      if selected_supplier != "అన్నీ (All)":
+        df = df[df[supplier_col] == selected_supplier]
 
-      receipt_col = "Type Reciept"
-      if receipt_col in df.columns:
-        receipts = ["అన్నీ (All)"] + list(df[receipt_col].dropna().unique())
-        selected_receipt = col2.selectbox("Type Reciept ఫిల్టర్:", receipts)
-        if selected_receipt != "అన్నీ (All)":
-          df = df[df[receipt_col] == selected_receipt]
+    receipt_col = "Type Reciept"
+    if receipt_col in df.columns:
+      receipts = ["అన్నీ (All)"] + list(df[receipt_col].dropna().unique())
+      selected_receipt = col2.selectbox("Type Reciept ఫిల్టర్:", receipts)
+      if selected_receipt != "అన్నీ (All)":
+        df = df[df[receipt_col] == selected_receipt]
 
-      st.markdown("---")
+    st.markdown("---")
 
-    # డేటా టేబుల్ (మొత్తం డేటా కనిపించడానికి తగిన హైట్ మరియు స్క్రోలింగ్)
+    # రోస్ సంఖ్యను బట్టి హైట్ ఆటోమేటిక్‌గా మారేలా సెట్ చేయడం (ప్రతి రో కి సుమారు 35 పిక్సెల్స్)
+    calc_height = min(max(len(df) * 38 + 40, 150), 500)
+
     st.data_editor(
         df,
         hide_index=True,
         use_container_width=True,
         disabled=True,
-        height=650,
+        height=calc_height,
     )
   else:
     uploaded_file = st.file_uploader(
