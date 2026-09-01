@@ -398,8 +398,8 @@ elif page == "7. Vendor Payments Entry":
 
       st.markdown("---")
 
-      # --- SIDE-BY-SIDE ACTION BUTTONS FOR POP-UPS ---
-      b_col1, b_col2, b_col3 = st.columns(3)
+      # --- TWO ACTION BUTTONS FOR POP-UPS ---
+      b_col1, b_col2 = st.columns(2)
 
       # 1. ADD NEW PAYMENT POPUP BUTTON
       with b_col1:
@@ -447,53 +447,8 @@ elif page == "7. Vendor Payments Entry":
 
           show_payment_popup()
 
-      # 2. VIEW PAYMENT HISTORY POPUP BUTTON (WITH PDF / PRINT OPTION)
+      # 2. VENDOR STATEMENT & LEDGER REPORT POPUP BUTTON (WITH PDF / PRINT OPTION)
       with b_col2:
-        if st.button("📜 View Payment History", use_container_width=True):
-
-          @st.dialog(
-              f"📜 Payment History Log — {selected_summary_sup}", width="large"
-          )
-          def show_history_popup():
-            if st.button("🖨️ Print / Save as PDF", key="print_history_popup"):
-              st.markdown(
-                  """
-                            <script>
-                            setTimeout(function() {
-                                window.print();
-                            }, 500);
-                            </script>
-                            """,
-                  unsafe_allow_html=True,
-              )
-
-            st.markdown("---")
-            if not st.session_state.payments_df.empty:
-              sup_hist = (
-                  st.session_state.payments_df[
-                      st.session_state.payments_df["Supplier Name"]
-                      == selected_summary_sup
-                  ]
-                  .copy()
-                  .reset_index(drop=True)
-              )
-              if not sup_hist.empty:
-                sup_hist.insert(0, "S.No", range(1, len(sup_hist) + 1))
-                st.data_editor(
-                    sup_hist,
-                    hide_index=True,
-                    use_container_width=True,
-                    disabled=True,
-                )
-              else:
-                st.info(f"No payment history found for {selected_summary_sup}.")
-            else:
-              st.info("No payments recorded yet.")
-
-          show_history_popup()
-
-      # 3. VENDOR STATEMENT & LEDGER REPORT POPUP BUTTON (WITH PDF / PRINT OPTION)
-      with b_col3:
         if st.button("📑 Full Statement & Ledger", use_container_width=True):
 
           @st.dialog(
@@ -565,6 +520,7 @@ elif page == "7. Vendor Payments Entry":
       st.error("Required supplier or valuation columns missing from dataset.")
   else:
     st.info("Please load data records first.")
+
 
 # ================= PAGE 8: VENDOR STATEMENT & LEDGER =================
 elif page == "8. Vendor Statement & Ledger":
