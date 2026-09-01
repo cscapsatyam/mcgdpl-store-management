@@ -655,54 +655,94 @@ elif page in [
   st.info("Module ready for operational deployment.")
 # ================= PAGE 9: AKG SHUTTERINGS DEDICATED LEDGER =================
 elif page == "9. AKG Shutterings Ledger":
-  st.title("📑 AKG SHUTTERINGS PRIVATE LIMITED - Dedicated Ledger")
+  st.title(
+      "📑 AKG SHUTTERINGS PRIVATE LIMITED - Rental & Material Ledger"
+  )
   st.markdown(
-      "Exclusive statement breakdown including Material Receiving Dates,"
-      " Invoice Nos, PO details, disbursements, and net balances."
+      "Exclusive statement breakdown including Store Entry, Receiving Dates,"
+      " Work Order, Day-wise & Monthly Rental Calculations."
   )
 
   if not st.session_state.current_df.empty:
     df = st.session_state.current_df.copy()
     sup_col = "Supplier / Sendor Name"
-    inv_col = "Invoice No"
 
-    possible_val_cols = [
-        "Inovice value",
-        "Invoice Value",
-        "Total Amount",
-        "Total Value",
-        "Amount",
-        "Value",
-        "Total",
-    ]
-    val_col = None
-    for col in possible_val_cols:
-      matched_cols = [c for c in df.columns if c.strip().lower() == col.lower()]
-      if matched_cols:
-        val_col = matched_cols[0]
-        break
-
-    if sup_col in df.columns and val_col:
-      df[val_col] = pd.to_numeric(
-          df[val_col].astype(str).str.replace(r"[^\d.]", "", regex=True),
-          errors="coerce",
-      ).fillna(0)
-
+    if sup_col in df.columns:
       target_supplier = "AKG SHUTTERINGS PRIVATE LIMITED"
-
-      # కేవలం AKG Shutterings డేటాను మాత్రమే ఫిల్టర్ చేయడం (డ్రాప్-డౌన్ అవసరం లేదు)
       sup_invoices = (
           df[df[sup_col] == target_supplier].copy().reset_index(drop=True)
       )
 
       if not sup_invoices.empty:
+        # 1. డే-వైస్ మరియు మంత్లీ కౌంటింగ్ లాజిక్ అప్లై చేయడం
+        if "Actualy Recived Date" in sup_invoices.columns:
+          # రిసీవ్ అయిన తేదీని datetime లోకి మార్చడం
+          sup_invoices["Actualy Recived Date DT"] = pd.to_datetime(
+              sup_invoices["Actualy Recived Date"], errors="coerce"
+          )
+
+          # రిటర్న్ డేట్ కాలమ్ ఉంటే దాన్ని తీసుకోవడం, లేకపోతే నేటి తేదీ (Current Date) లేదా డిఫాల్ట్ తీసుకోవడం
+          if "Return Date" in sup_invoices.columns:
+            sup_invoices["Return Date DT"] = pd.to_datetime(
+                sup_invoices["Return Date"], errors="coerce"
+            )
+          else:
+            sup_invoices["Return Date DT"] = pd.to_datetime(
+                "today"
+            )  # రిటర్న్ డేట్ లేకపోతే కరెంట్ డేట్
+
+          # టోటల్ డేస్ కౌంట్ (Received Date నుండి Return Date వరకు, కనిష్టంగా 1 రోజు)
+          sup_invoices["Total Days"] = (
+              sup_invoices["Return Date DT"]
+              - sup_invoices["Actualy Recived Date DT"]
+          ).dt.days
+          sup_invoices["Total Days"] = sup_invoices["Total Days"].fillna(1)
+          sup_invoices["Total Days"] = sup_invoices["Total Days"].apply(
+              lambda x: max(int(x), 1)
+          )
+
+          # మంత్లీ కౌంటింగ్ (నెలకి 30 రోజులుగా లెక్కగట్టడం లేదా డే-వైస్)
+          sup_invoices["Calculated Months"] = np.ceil(
+              sup_invoices["Total Days"] / 30.0
+          )
+
+        # స్రీరియల్ నంబర్ యాడ్ చేయడం
         if "S.No" in sup_invoices.columns:
           sup_invoices["S.No"] = range(1, len(sup_invoices) + 1)
         else:
           sup_invoices.insert(0, "S.No", range(1, len(sup_invoices) + 1))
 
-        total_inv_amt = sup_invoices[val_col].sum()
+        # ఇన్వాయిస్ వాల్యూ లేదా టోటల్ అమౌంట్ కాలమ్ ఐడెంటిఫై చేయడం
+        possible_val_cols = [
+            "Inovice value",
+            "Invoice Value",
+            "Total Amount",
+            "Total Value",
+            "Amount",
+            "Value",
+            "Total",
+        ]
+        val_col = None
+        for col in possible_val_cols:
+          matched_cols = [
+              c for c in sup_invoices.columns if c.strip().lower() == col.lower()
+          ]
+          if matched_cols:
+            val_col = matched_cols[0]
+            break
 
+        if val_col and val_col in sup_invoices.columns:
+          sup_invoices[val_col] = pd.to_numeric(
+              sup_invoices[val_col]
+              .astype(str)
+              .str.replace(r"[^\d.]", "", regex=True),
+              errors="coerce",
+          ).fillna(0)
+          total_inv_amt = sup_invoices[val_col].sum()
+        else:
+          total_inv_amt = 0.0
+
+        # పేమెంట్స్ టోటల్ లెక్కించడం
         if not st.session_state.payments_df.empty:
           sup_payments = (
               st.session_state.payments_df[
@@ -722,9 +762,9 @@ elif page == "9. AKG Shutterings Ledger":
 
         net_outstanding = total_inv_amt - total_paid_amt
 
-        # మెట్రిక్స్ డిస్‌ప్లే
+        # టాప్ మెట్రిక్స్ డిస్‌ప్లే
         col_m1, col_m2, col_m3 = st.columns(3)
-        col_m1.metric("📦 Total Invoice Value", f"₹ {total_inv_amt:,.2f}")
+        col_m1.metric("📦 Total Value / Rental", f"₹ {total_inv_amt:,.2f}")
         col_m2.metric("💳 Total Paid Value", f"₹ {total_paid_amt:,.2f}")
         col_m3.metric("⚠️ Net Outstanding Balance", f"₹ {net_outstanding:,.2f}")
 
@@ -745,27 +785,32 @@ elif page == "9. AKG Shutterings Ledger":
             )
 
         st.subheader(
-            "📂 Material Receiving Date, Invoice & PO Details — AKG Shutterings"
+            "📂 Store Entry, Material, UOM, Qty, Rate & Day-Wise/Monthly Rental"
+            " Count — AKG Shutterings"
         )
 
-        preferred_cols = [
+        # మీరు అడిగిన ఆర్డర్ ప్రకారం కాలమ్స్ సెట్ చేయడం
+        desired_cols = [
             "S.No",
             "Store Entry No",
             "Actualy Recived Date",
-            "Invoice Date",
-            "Invoice No",
-            "PO No",
-            "GRN No",
-            "GRN Date",
+            "Work Order No",
+            "Description Of material",
+            "UOM",
+            "Qty",
+            "Rate",
+            "Total Days",
+            "Calculated Months",
+            "CGST",
+            "SGST",
             val_col,
         ]
-        existing_pref_cols = [
-            c for c in preferred_cols if c in sup_invoices.columns
-        ]
+        # డేటాలో ఉన్న కాలమ్స్ మాత్రమే ఎంచుకోవడం
+        existing_cols = [c for c in desired_cols if c and c in sup_invoices.columns]
         other_cols = [
-            c for c in sup_invoices.columns if c not in existing_pref_cols
+            c for c in sup_invoices.columns if c not in existing_cols
         ]
-        ordered_sup_invoices = sup_invoices[existing_pref_cols + other_cols]
+        ordered_sup_invoices = sup_invoices[existing_cols + other_cols]
 
         st.data_editor(
             ordered_sup_invoices,
@@ -793,6 +838,6 @@ elif page == "9. AKG Shutterings Ledger":
             " dataset."
         )
     else:
-      st.error("Required dataset columns not detected.")
+      st.error("Supplier column not detected in dataset.")
   else:
     st.info("Please load data records first.")
