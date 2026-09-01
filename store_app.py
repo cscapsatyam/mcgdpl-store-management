@@ -455,7 +455,7 @@ elif page == "8. Vendor Outstanding Detailed Report":
       )
 
       st.markdown("---")
-      st.subheader(f"💳 Payment Disbursement Log — {selected_supplier_det}")
+      st.subheader(f"💳 Payment Details — {selected_supplier_det}")
       if not sup_payments.empty:
         st.data_editor(
             sup_payments,
