@@ -652,3 +652,146 @@ elif page in [
       "This module is configured to standard corporate template parameters."
   )
   st.info("Module ready for operational deployment.")
+# ================= PAGE 9: AKG SHUTTERINGS DEDICATED LEDGER =================
+elif page == "9. AKG Shutterings Ledger":
+  st.title("📑 AKG SHUTTERINGS PRIVATE LIMITED - Dedicated Ledger")
+  st.markdown(
+      "Exclusive statement breakdown including Material Receiving Dates,"
+      " Invoice Nos, PO details, disbursements, and net balances."
+  )
+
+  if not st.session_state.current_df.empty:
+    df = st.session_state.current_df.copy()
+    sup_col = "Supplier / Sendor Name"
+    inv_col = "Invoice No"
+
+    possible_val_cols = [
+        "Inovice value",
+        "Invoice Value",
+        "Total Amount",
+        "Total Value",
+        "Amount",
+        "Value",
+        "Total",
+    ]
+    val_col = None
+    for col in possible_val_cols:
+      matched_cols = [c for c in df.columns if c.strip().lower() == col.lower()]
+      if matched_cols:
+        val_col = matched_cols[0]
+        break
+
+    if sup_col in df.columns and val_col:
+      df[val_col] = pd.to_numeric(
+          df[val_col].astype(str).str.replace(r"[^\d.]", "", regex=True),
+          errors="coerce",
+      ).fillna(0)
+
+      target_supplier = "AKG SHUTTERINGS PRIVATE LIMITED"
+
+      # కేవలం AKG Shutterings డేటాను మాత్రమే ఫిల్టర్ చేయడం (డ్రాప్-డౌన్ అవసరం లేదు)
+      sup_invoices = (
+          df[df[sup_col] == target_supplier].copy().reset_index(drop=True)
+      )
+
+      if not sup_invoices.empty:
+        if "S.No" in sup_invoices.columns:
+          sup_invoices["S.No"] = range(1, len(sup_invoices) + 1)
+        else:
+          sup_invoices.insert(0, "S.No", range(1, len(sup_invoices) + 1))
+
+        total_inv_amt = sup_invoices[val_col].sum()
+
+        if not st.session_state.payments_df.empty:
+          sup_payments = (
+              st.session_state.payments_df[
+                  st.session_state.payments_df["Supplier Name"] == target_supplier
+              ]
+              .copy()
+              .reset_index(drop=True)
+          )
+          if not sup_payments.empty:
+            sup_payments.insert(0, "S.No", range(1, len(sup_payments) + 1))
+            total_paid_amt = sup_payments["Paid Amount"].sum()
+          else:
+            total_paid_amt = 0.0
+        else:
+          sup_payments = pd.DataFrame()
+          total_paid_amt = 0.0
+
+        net_outstanding = total_inv_amt - total_paid_amt
+
+        # మెట్రిక్స్ డిస్‌ప్లే
+        col_m1, col_m2, col_m3 = st.columns(3)
+        col_m1.metric("📦 Total Invoice Value", f"₹ {total_inv_amt:,.2f}")
+        col_m2.metric("💳 Total Paid Value", f"₹ {total_paid_amt:,.2f}")
+        col_m3.metric("⚠️ Net Outstanding Balance", f"₹ {net_outstanding:,.2f}")
+
+        st.markdown("---")
+
+        col_b1, col_b2 = st.columns([6, 1])
+        with col_b2:
+          if st.button("🖨️ Print / PDF", key="print_btn_akg_page"):
+            st.markdown(
+                """
+                    <script>
+                    setTimeout(function() {
+                        window.print();
+                    }, 500);
+                    </script>
+                    """,
+                unsafe_allow_html=True,
+            )
+
+        st.subheader(
+            "📂 Material Receiving Date, Invoice & PO Details — AKG Shutterings"
+        )
+
+        preferred_cols = [
+            "S.No",
+            "Store Entry No",
+            "Actualy Recived Date",
+            "Invoice Date",
+            "Invoice No",
+            "PO No",
+            "GRN No",
+            "GRN Date",
+            val_col,
+        ]
+        existing_pref_cols = [
+            c for c in preferred_cols if c in sup_invoices.columns
+        ]
+        other_cols = [
+            c for c in sup_invoices.columns if c not in existing_pref_cols
+        ]
+        ordered_sup_invoices = sup_invoices[existing_pref_cols + other_cols]
+
+        st.data_editor(
+            ordered_sup_invoices,
+            hide_index=True,
+            use_container_width=True,
+            disabled=True,
+            key="akg_inv_table",
+        )
+
+        st.markdown("---")
+        st.subheader("💳 Payment Disbursement Log — AKG Shutterings")
+        if not sup_payments.empty:
+          st.data_editor(
+              sup_payments,
+              hide_index=True,
+              use_container_width=True,
+              disabled=True,
+              key="akg_pay_table",
+          )
+        else:
+          st.info("No payment transactions recorded for this vendor yet.")
+      else:
+        st.warning(
+            "No records found for 'AKG SHUTTERINGS PRIVATE LIMITED' in the"
+            " dataset."
+        )
+    else:
+      st.error("Required dataset columns not detected.")
+  else:
+    st.info("Please load data records first.")
