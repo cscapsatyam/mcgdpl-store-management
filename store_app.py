@@ -60,31 +60,13 @@ if page == "1. Home / Dashboard":
     # రోస్ సంఖ్యను బట్టి హైట్ ఆటోమేటిక్‌గా మారేలా సెట్ చేయడం
     calc_height = min(max(len(df) * 38 + 40, 150), 500)
 
-    # ఎర్రర్ రాకుండా సురక్షితమైన కాలమ్ కాన్ఫిగరేషన్ (అన్నీ TextColumn గా మార్చడం)
-    column_config = {
-        "S.No": st.column_config.TextColumn("S.No", width="small"),
-        "Store Entry No": st.column_config.TextColumn(
-            "Store Entry No", width="small"
-        ),
-        "UOM": st.column_config.TextColumn("UOM", width="small"),
-        "GRN No": st.column_config.TextColumn("GRN No", width="small"),
-        "PO No": st.column_config.TextColumn("PO No", width="small"),
-        "Invoice No": st.column_config.TextColumn("Invoice No", width="medium"),
-        "Supplier / Sendor Name": st.column_config.TextColumn(
-            "Supplier / Sendor Name", width="large"
-        ),
-        "Description Of material": st.column_config.TextColumn(
-            "Description Of material", width="large"
-        ),
-    }
-
+    # ఎలాంటి ఎర్రర్స్ రాకుండా స్టాండర్డ్ ఎడిటర్ డిస్‌ప్లే
     st.data_editor(
         df,
         hide_index=True,
         use_container_width=True,
         disabled=True,
         height=calc_height,
-        column_config=column_config,
     )
   else:
     uploaded_file = st.file_uploader(
