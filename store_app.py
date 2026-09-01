@@ -258,12 +258,16 @@ elif page == "6. Invoice Wise Total Value":
 
 # ================= PAGE 7: VENDOR PAYMENTS ENTRY =================
 elif page == "7. Vendor Payments Entry":
-  st.title("💳 HO Payments Management")
-  st.markdown("Record and track head office disbursements made to vendors.")
+  st.title("💳 HO Payments Management & Vendor Ledger Hub")
+  st.markdown(
+      "Record disbursements, view transaction logs, and access detailed"
+      " financial statements."
+  )
 
   if not st.session_state.current_df.empty:
     df = st.session_state.current_df.copy()
     sup_col = "Supplier / Sendor Name"
+    inv_col = "Invoice No"
 
     possible_val_cols = [
         "Inovice value",
@@ -289,56 +293,16 @@ elif page == "7. Vendor Payments Entry":
 
       suppliers_unique = list(df[sup_col].dropna().unique())
 
-      # --- POP-UP MODAL WINDOW FOR NEW PAYMENT ENTRY ---
-      if st.button("➕ Add New Payment Entry", type="primary"):
-        @st.dialog("➕ New Payment Entry Form", width="large")
-        def show_payment_popup():
-          with st.form("payment_form_popup"):
-            col_p1, col_p2 = st.columns(2)
-            p_supplier = col_p1.selectbox(
-                "Select Supplier Name:", suppliers_unique
-            )
-            p_date = col_p2.date_input("Payment Date:")
-
-            col_p3, col_p4 = st.columns(2)
-            p_ref = col_p3.text_input("Reference No (UTR / Cheque / Ref ID):")
-            p_amount = col_p4.number_input(
-                "Paid Amount (₹):", min_value=0.0, step=100.0
-            )
-            p_remarks = st.text_input("Remarks / Description:")
-
-            submitted = st.form_submit_button("Save Payment Record")
-            if submitted:
-              new_payment = pd.DataFrame(
-                  {
-                      "Supplier Name": [p_supplier],
-                      "Payment Date": [str(p_date)],
-                      "Reference No": [p_ref],
-                      "Paid Amount": [p_amount],
-                      "Remarks": [p_remarks],
-                  }
-              )
-              st.session_state.payments_df = pd.concat(
-                  [st.session_state.payments_df, new_payment], ignore_index=True
-              )
-              st.session_state.payments_df.to_csv(PAYMENTS_FILE, index=False)
-              st.success(
-                  f"Successfully recorded payment of ₹ {p_amount:,.2f} for"
-                  f" {p_supplier}!"
-              )
-              st.rerun()
-
-        show_payment_popup()
-
-      st.markdown("---")
-      st.subheader("📋 Selected Supplier Financial Standing:")
-
+      # --- TOP SELECTOR FOR SUPPLIER ---
       selected_summary_sup = st.selectbox(
-          "🔍 View Financial Summary for Supplier:",
+          "🔍 Select Vendor Account:",
           suppliers_unique,
           key="summary_sup_select",
       )
 
+      st.markdown("---")
+
+      # --- CALCULATE FINANCIAL STANDING FOR SELECTED SUPPLIER ---
       sup_filtered_df = df[df[sup_col] == selected_summary_sup]
       total_inv_amt = sup_filtered_df[val_col].sum()
 
@@ -353,6 +317,7 @@ elif page == "7. Vendor Payments Entry":
 
       net_out = total_inv_amt - total_paid_amt
 
+      # Display Metrics
       m_col1, m_col2, m_col3 = st.columns(3)
       m_col1.metric("Total Invoice Amount", f"₹ {total_inv_amt:,.2f}")
       m_col2.metric("Total Paid Amount", f"₹ {total_paid_amt:,.2f}")
@@ -363,11 +328,12 @@ elif page == "7. Vendor Payments Entry":
               "Supplier Name": [selected_summary_sup],
               "Total Invoice Amount": [total_inv_amt],
               "Paid Amount": [total_paid_amt],
-              "Outstanding Balance": [net_out],
+              "Outstanding Amount": [net_out],
           }
       )
       summary_single_df.insert(0, "S.No", [1])
 
+      st.markdown("### Financial Standing Summary:")
       st.data_editor(
           summary_single_df,
           hide_index=True,
@@ -375,36 +341,144 @@ elif page == "7. Vendor Payments Entry":
           disabled=True,
       )
 
-      # --- POP-UP MODAL WINDOW FOR PAYMENT HISTORY ---
       st.markdown("---")
-      if st.button(f"📜 View Payment History for {selected_summary_sup}"):
-        @st.dialog(
-            f"📜 Payment History Log — {selected_summary_sup}", width="large"
-        )
-        def show_history_popup():
-          if not st.session_state.payments_df.empty:
-            sup_hist = (
-                st.session_state.payments_df[
-                    st.session_state.payments_df["Supplier Name"]
-                    == selected_summary_sup
-                ]
+
+      # --- SIDE-BY-SIDE ACTION BUTTONS FOR POP-UPS ---
+      b_col1, b_col2, b_col3 = st.columns(3)
+
+      # 1. ADD NEW PAYMENT POPUP BUTTON
+      with b_col1:
+        if st.button("➕ Add New Payment", use_container_width=True):
+
+          @st.dialog("➕ New Payment Entry Form", width="large")
+          def show_payment_popup():
+            with st.form("payment_form_popup"):
+              col_p1, col_p2 = st.columns(2)
+              p_supplier = col_p1.selectbox(
+                  "Select Supplier Name:",
+                  suppliers_unique,
+                  index=suppliers_unique.index(selected_summary_sup),
+              )
+              p_date = col_p2.date_input("Payment Date:")
+
+              col_p3, col_p4 = st.columns(2)
+              p_ref = col_p3.text_input("Reference No (UTR / Cheque / Ref ID):")
+              p_amount = col_p4.number_input(
+                  "Paid Amount (₹):", min_value=0.0, step=100.0
+              )
+              p_remarks = st.text_input("Remarks / Description:")
+
+              submitted = st.form_submit_button("Save Payment Record")
+              if submitted:
+                new_payment = pd.DataFrame(
+                    {
+                        "Supplier Name": [p_supplier],
+                        "Payment Date": [str(p_date)],
+                        "Reference No": [p_ref],
+                        "Paid Amount": [p_amount],
+                        "Remarks": [p_remarks],
+                    }
+                )
+                st.session_state.payments_df = pd.concat(
+                    [st.session_state.payments_df, new_payment],
+                    ignore_index=True,
+                )
+                st.session_state.payments_df.to_csv(PAYMENTS_FILE, index=False)
+                st.success(
+                    f"Successfully recorded payment of ₹ {p_amount:,.2f} for"
+                    f" {p_supplier}!"
+                )
+                st.rerun()
+
+          show_payment_popup()
+
+      # 2. VIEW PAYMENT HISTORY POPUP BUTTON
+      with b_col2:
+        if st.button("📜 View Payment History", use_container_width=True):
+
+          @st.dialog(
+              f"📜 Payment History Log — {selected_summary_sup}", width="large"
+          )
+          def show_history_popup():
+            if not st.session_state.payments_df.empty:
+              sup_hist = (
+                  st.session_state.payments_df[
+                      st.session_state.payments_df["Supplier Name"]
+                      == selected_summary_sup
+                  ]
+                  .copy()
+                  .reset_index(drop=True)
+              )
+              if not sup_hist.empty:
+                sup_hist.insert(0, "S.No", range(1, len(sup_hist) + 1))
+                st.data_editor(
+                    sup_hist,
+                    hide_index=True,
+                    use_container_width=True,
+                    disabled=True,
+                )
+              else:
+                st.info(f"No payment history found for {selected_summary_sup}.")
+            else:
+              st.info("No payments recorded yet.")
+
+          show_history_popup()
+
+      # 3. VENDOR STATEMENT & LEDGER REPORT POPUP BUTTON
+      with b_col3:
+        if st.button("📑 Full Statement & Ledger", use_container_width=True):
+
+          @st.dialog(
+              f"📑 Complete Statement & Ledger — {selected_summary_sup}",
+              width="large",
+          )
+          def show_ledger_popup():
+            sup_invoices = (
+                df[df[sup_col] == selected_summary_sup]
                 .copy()
                 .reset_index(drop=True)
             )
-            if not sup_hist.empty:
-              sup_hist.insert(0, "S.No", range(1, len(sup_hist) + 1))
+            if "S.No" in sup_invoices.columns:
+              sup_invoices["S.No"] = range(1, len(sup_invoices) + 1)
+            else:
+              sup_invoices.insert(0, "S.No", range(1, len(sup_invoices) + 1))
+
+            st.markdown(f"### 📂 Invoice Line Items")
+            st.data_editor(
+                sup_invoices,
+                hide_index=True,
+                use_container_width=True,
+                disabled=True,
+            )
+
+            st.markdown("---")
+            st.markdown(f"### 💳 Payment Disbursement Log")
+            if (
+                not st.session_state.payments_df.empty
+                and selected_summary_sup
+                in st.session_state.payments_df["Supplier Name"].values
+            ):
+              sup_payments = (
+                  st.session_state.payments_df[
+                      st.session_state.payments_df["Supplier Name"]
+                      == selected_summary_sup
+                  ]
+                  .copy()
+                  .reset_index(drop=True)
+              )
+              sup_payments.insert(0, "S.No", range(1, len(sup_payments) + 1))
               st.data_editor(
-                  sup_hist,
+                  sup_payments,
                   hide_index=True,
                   use_container_width=True,
                   disabled=True,
               )
             else:
-              st.info(f"No payment history found for {selected_summary_sup}.")
-          else:
-            st.info("No payments recorded yet.")
+              st.info(
+                  "No payment transactions recorded for this vendor yet."
+              )
 
-        show_history_popup()
+          show_ledger_popup()
 
     else:
       st.error("Required supplier or valuation columns missing from dataset.")
