@@ -61,6 +61,8 @@ if page == "1. Home / Dashboard":
 
   if not st.session_state.current_df.empty:
     st.success("✅ డేటా ఆటోమేటిక్‌గా లోడ్ చేయబడింది!")
+    st.markdown("### 📊 లోడ్ అయిన డేటా వివరాలు:")
+    st.dataframe(st.session_state.current_df)
   else:
     st.markdown(
         "### స్వాగతం! దయచేసి ఎక్సెల్ ఫైల్‌ను అప్‌లోడ్ చేయండి లేదా సైడ్‌బార్"
