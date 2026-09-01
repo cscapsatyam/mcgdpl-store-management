@@ -7,23 +7,27 @@ st.set_page_config(
     page_title="Enterprise Store Management System", layout="wide"
 )
 
-# Custom Styling for Professional Look
+# Custom Styling for Professional Look & Modern Navigation
 st.markdown(
     """
     <style>
     .main {
-        background-color: #f8f9fa;
+        background-color: #f4f6f9;
     }
     div.stButton > button {
         background-color: #0d6efd;
         color: white;
-        border-radius: 4px;
-        padding: 0.35rem 0.75rem;
+        border-radius: 6px;
+        padding: 0.4rem 1rem;
         border: none;
+        font-weight: 500;
     }
     div.stButton > button:hover {
         background-color: #0b5ed7;
         color: white;
+    }
+    .css-1d391kg {
+        background-color: #ffffff;
     }
     </style>
     """,
@@ -70,24 +74,33 @@ if st.session_state.current_df.empty:
   except Exception as e:
     pass
 
-# Sidebar Navigation
-st.sidebar.title("Navigation Panel")
+# --- Professional Top / Sidebar Header ---
+st.sidebar.markdown(
+    "## 🏢 Enterprise Store"
+)  # చిన్న టైటిల్ మాత్రమే సైడ్‌బార్‌లో ఉంచుదాం
+st.sidebar.markdown("---")
+
+# మోడర్న్ నావిగేషన్ మెను (ప్రొఫెషనల్ లుక్ కోసం రేడియో బటన్‌ని నీట్‌గా అరేంజ్ చేశాం)
 page = st.sidebar.radio(
-    "Select Module:",
+    "📌 Main Modules:",
     [
-        "1. Home / Dashboard",
+        "1. Dashboard / Home",
         "2. Material Register View",
         "3. New Record Creation",
         "4. All Suppliers List",
         "5. Material List",
         "6. Invoice Wise Total Value",
         "7. Vendor Payments Entry",
-        "8. Vendor Outstanding Detailed Report",
+        "8. Vendor Statement & Ledger",
     ],
+    index=0,
 )
 
+st.sidebar.markdown("---")
+st.sidebar.caption("System Version: 2.5.0 | Secure Cloud DB")
+
 # ================= PAGE 1: HOME =================
-if page == "1. Home / Dashboard":
+if page == "1. Dashboard / Home":
   st.title("📦 Store Management Dashboard")
   st.markdown("Overview of store inventory and receipt records.")
 
@@ -294,7 +307,6 @@ elif page == "7. Vendor Payments Entry":
           st.session_state.payments_df = pd.concat(
               [st.session_state.payments_df, new_payment], ignore_index=True
           )
-          # పర్మనెంట్‌గా CSV ఫైల్‌లో సేవ్ చేయడం
           st.session_state.payments_df.to_csv(PAYMENTS_FILE, index=False)
           st.success(
               f"Successfully recorded payment of ₹ {p_amount:,.2f} for"
@@ -355,11 +367,11 @@ elif page == "7. Vendor Payments Entry":
   else:
     st.info("Please load data records first.")
 
-# ================= PAGE 8: VENDOR OUTSTANDING DETAILED REPORT =================
-elif page == "8. Vendor Outstanding Detailed Report":
+# ================= PAGE 8: VENDOR STATEMENT & LEDGER =================
+elif page == "8. Vendor Statement & Ledger":
   st.title("📑 Vendor Statement & Ledger Report")
   st.markdown(
-      "Detailed ledger Details"
+      "Detailed ledger breakdown of invoices, disbursements, and net"
       " outstanding balances."
   )
 
@@ -445,7 +457,7 @@ elif page == "8. Vendor Outstanding Detailed Report":
               unsafe_allow_html=True,
           )
 
-      st.subheader(f"📂  {selected_supplier_det}")
+      st.subheader(f"📂 Invoice Line Items — {selected_supplier_det}")
       st.data_editor(
           sup_invoices,
           hide_index=True,
@@ -455,7 +467,7 @@ elif page == "8. Vendor Outstanding Detailed Report":
       )
 
       st.markdown("---")
-      st.subheader(f"💳 Payment Details — {selected_supplier_det}")
+      st.subheader(f"💳 Payment Disbursement Log — {selected_supplier_det}")
       if not sup_payments.empty:
         st.data_editor(
             sup_payments,
