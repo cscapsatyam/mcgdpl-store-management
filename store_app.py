@@ -656,11 +656,11 @@ elif page in [
 # ================= PAGE 9: AKG SHUTTERINGS DEDICATED LEDGER =================
 elif page == "9. AKG Shutterings Ledger":
   st.title(
-      "📑 AKG SHUTTERINGS PRIVATE LIMITED - Rental & Material Ledger"
+      "📑 AKG SHUTTERINGS PRIVATE LIMITED - Rental & Tax Ledger (18% Default)"
   )
   st.markdown(
-      "Exclusive statement breakdown including Store Entry, Receiving Dates,"
-      " Work Order, Day-wise & Monthly Rental Calculations."
+      "Exclusive statement breakdown including Store Entry, Receiving/Return"
+      " Dates, Monthly Stock Rent, and 18% Tax Calculation."
   )
 
   if not st.session_state.current_df.empty:
@@ -674,24 +674,45 @@ elif page == "9. AKG Shutterings Ledger":
       )
 
       if not sup_invoices.empty:
-        # 1. డే-వైస్ మరియు మంత్లీ కౌంటింగ్ లాజిక్ అప్లై చేయడం
+        # 1. Month-wise Value Filter
+        date_col = (
+            "Actualy Recived Date"
+            if "Actualy Recived Date" in sup_invoices.columns
+            else None
+        )
+        if date_col:
+          sup_invoices["Month_Year"] = pd.to_datetime(
+              sup_invoices[date_col], errors="coerce"
+          ).dt.strftime("%B %Y")
+          months_list = ["All Months"] + [
+              m for m in sup_invoices["Month_Year"].dropna().unique()
+          ]
+
+          col_f1, col_f2 = st.columns([2, 4])
+          with col_f1:
+            selected_month = st.selectbox(
+                "📅 Filter by Month & Year:", months_list, key="akg_month_filter"
+            )
+
+          if selected_month != "All Months":
+            sup_invoices = sup_invoices[
+                sup_invoices["Month_Year"] == selected_month
+            ]
+
+        # 2. డే-వైస్, మంత్లీ రెంట్ మరియు 18% టాక్స్ కాలిక్యులేషన్ లాజిక్
         if "Actualy Recived Date" in sup_invoices.columns:
-          # రిసీవ్ అయిన తేదీని datetime లోకి మార్చడం
           sup_invoices["Actualy Recived Date DT"] = pd.to_datetime(
               sup_invoices["Actualy Recived Date"], errors="coerce"
           )
 
-          # రిటర్న్ డేట్ కాలమ్ ఉంటే దాన్ని తీసుకోవడం, లేకపోతే నేటి తేదీ (Current Date) లేదా డిఫాల్ట్ తీసుకోవడం
           if "Return Date" in sup_invoices.columns:
             sup_invoices["Return Date DT"] = pd.to_datetime(
                 sup_invoices["Return Date"], errors="coerce"
             )
           else:
-            sup_invoices["Return Date DT"] = pd.to_datetime(
-                "today"
-            )  # రిటర్న్ డేట్ లేకపోతే కరెంట్ డేట్
+            sup_invoices["Return Date DT"] = pd.to_datetime("today")
 
-          # టోటల్ డేస్ కౌంట్ (Received Date నుండి Return Date వరకు, కనిష్టంగా 1 రోజు)
+          # టోటల్ డేస్ కౌంట్
           sup_invoices["Total Days"] = (
               sup_invoices["Return Date DT"]
               - sup_invoices["Actualy Recived Date DT"]
@@ -701,48 +722,61 @@ elif page == "9. AKG Shutterings Ledger":
               lambda x: max(int(x), 1)
           )
 
-          # మంత్లీ కౌంటింగ్ (నెలకి 30 రోజులుగా లెక్కగట్టడం లేదా డే-వైస్)
-          sup_invoices["Calculated Months"] = np.ceil(
+          # మంత్లీ కౌంటింగ్ (నెలవారీ రెంట్ కోసం)
+          sup_invoices["Calculated Months"] = (
               sup_invoices["Total Days"] / 30.0
-          )
+          ).round(2)
 
-        # స్రీరియల్ నంబర్ యాడ్ చేయడం
+        # రేట్ మరియు క్వాంటిటీ నుండి బేసిక్ మంత్లీ రెంట్ వాల్యూ లెక్కించడం
+        possible_qty_cols = ["Qty", "Quantity", "Nos"]
+        possible_rate_cols = ["Rate", "Unit Rate", "Rent Rate"]
+
+        qty_col = next(
+            (c for c in possible_qty_cols if c in sup_invoices.columns), None
+        )
+        rate_col = next(
+            (c for c in possible_rate_cols if c in sup_invoices.columns), None
+        )
+
+        if qty_col and rate_col:
+          sup_invoices[qty_col] = pd.to_numeric(
+              sup_invoices[qty_col].astype(str).str.replace(r"[^\d.]", "", regex=True),
+              errors="coerce",
+          ).fillna(0)
+          sup_invoices[rate_col] = pd.to_numeric(
+              sup_invoices[rate_col]
+              .astype(str)
+              .str.replace(r"[^\d.]", "", regex=True),
+              errors="coerce",
+          ).fillna(0)
+
+          # బేసిక్ రెంట్ = Qty * Rate * Calculated Months
+          sup_invoices["Base Rent Value"] = (
+              sup_invoices[qty_col]
+              * sup_invoices[rate_col]
+              * sup_invoices["Calculated Months"]
+          ).round(2)
+        else:
+          sup_invoices["Base Rent Value"] = 0.0
+
+        # డిఫాల్ట్ 18% టాక్స్ (CGST 9% + SGST 9%) ఆటోమేటిక్ కాలిక్యులేషన్
+        sup_invoices["CGST (9%)"] = (sup_invoices["Base Rent Value"] * 0.09).round(2)
+        sup_invoices["SGST (9%)"] = (sup_invoices["Base Rent Value"] * 0.09).round(2)
+        sup_invoices["Total Rent with 18% Tax"] = (
+            sup_invoices["Base Rent Value"]
+            + sup_invoices["CGST (9%)"]
+            + sup_invoices["SGST (9%)"]
+        ).round(2)
+
+        # సీరియల్ నంబర్
         if "S.No" in sup_invoices.columns:
           sup_invoices["S.No"] = range(1, len(sup_invoices) + 1)
         else:
           sup_invoices.insert(0, "S.No", range(1, len(sup_invoices) + 1))
 
-        # ఇన్వాయిస్ వాల్యూ లేదా టోటల్ అమౌంట్ కాలమ్ ఐడెంటిఫై చేయడం
-        possible_val_cols = [
-            "Inovice value",
-            "Invoice Value",
-            "Total Amount",
-            "Total Value",
-            "Amount",
-            "Value",
-            "Total",
-        ]
-        val_col = None
-        for col in possible_val_cols:
-          matched_cols = [
-              c for c in sup_invoices.columns if c.strip().lower() == col.lower()
-          ]
-          if matched_cols:
-            val_col = matched_cols[0]
-            break
+        total_inv_amt = sup_invoices["Total Rent with 18% Tax"].sum()
 
-        if val_col and val_col in sup_invoices.columns:
-          sup_invoices[val_col] = pd.to_numeric(
-              sup_invoices[val_col]
-              .astype(str)
-              .str.replace(r"[^\d.]", "", regex=True),
-              errors="coerce",
-          ).fillna(0)
-          total_inv_amt = sup_invoices[val_col].sum()
-        else:
-          total_inv_amt = 0.0
-
-        # పేమెంట్స్ టోటల్ లెక్కించడం
+        # పేమెంట్స్ టోటల్
         if not st.session_state.payments_df.empty:
           sup_payments = (
               st.session_state.payments_df[
@@ -762,50 +796,75 @@ elif page == "9. AKG Shutterings Ledger":
 
         net_outstanding = total_inv_amt - total_paid_amt
 
-        # టాప్ మెట్రిక్స్ డిస్‌ప్లే
+        # మెట్రిక్స్ డిస్‌ప్లే
         col_m1, col_m2, col_m3 = st.columns(3)
-        col_m1.metric("📦 Total Value / Rental", f"₹ {total_inv_amt:,.2f}")
+        col_m1.metric("📦 Total Rent Value (inc. 18% Tax)", f"₹ {total_inv_amt:,.2f}")
         col_m2.metric("💳 Total Paid Value", f"₹ {total_paid_amt:,.2f}")
         col_m3.metric("⚠️ Net Outstanding Balance", f"₹ {net_outstanding:,.2f}")
 
         st.markdown("---")
 
-        col_b1, col_b2 = st.columns([6, 1])
-        with col_b2:
-          if st.button("🖨️ Print / PDF", key="print_btn_akg_page"):
-            st.markdown(
-                """
-                    <script>
-                    setTimeout(function() {
-                        window.print();
-                    }, 500);
-                    </script>
-                    """,
-                unsafe_allow_html=True,
-            )
+        # Quick Payment Entry Pop-up with Default Vendor
+        if st.button("💳 Add Payment for AKG Shutterings", key="btn_pay_akg"):
+          st.session_state["show_akg_pay_popup"] = True
 
+        if st.session_state.get("show_akg_pay_popup", False):
+          with st.form("akg_payment_form"):
+            st.subheader("Add Payment Entry — AKG Shutterings")
+            p_vendor = st.text_input(
+                "Vendor Name", value=target_supplier, disabled=True
+            )
+            p_date = st.date_input("Payment Date")
+            p_amount = st.number_input(
+                "Paid Amount (₹)", min_value=0.0, format="%.2f"
+            )
+            p_mode = st.selectbox(
+                "Payment Mode", ["Bank Transfer", "Cheque", "UPI", "Cash"]
+            )
+            p_ref = st.text_input("Reference / Transaction ID")
+
+            submitted_pay = st.form_submit_button("Save Payment")
+            if submitted_pay:
+              new_pay_row = {
+                  "Supplier Name": target_supplier,
+                  "Payment Date": str(p_date),
+                  "Paid Amount": p_amount,
+                  "Payment Mode": p_mode,
+                  "Reference No": p_ref,
+              }
+              st.session_state.payments_df = pd.concat(
+                  [
+                      st.session_state.payments_df,
+                      pd.DataFrame([new_pay_row]),
+                  ],
+                  ignore_index=True,
+              )
+              st.session_state["show_akg_pay_popup"] = False
+              st.success("Payment saved successfully!")
+              st.rerun()
+
+        st.markdown("---")
         st.subheader(
-            "📂 Store Entry, Material, UOM, Qty, Rate & Day-Wise/Monthly Rental"
-            " Count — AKG Shutterings"
+            "📂 Monthly Stock Rent & 18% Tax Breakdown — AKG Shutterings"
         )
 
-        # మీరు అడిగిన ఆర్డర్ ప్రకారం కాలమ్స్ సెట్ చేయడం
         desired_cols = [
             "S.No",
             "Store Entry No",
             "Actualy Recived Date",
+            "Return Date",
             "Work Order No",
             "Description Of material",
             "UOM",
-            "Qty",
-            "Rate",
+            qty_col,
+            rate_col,
             "Total Days",
             "Calculated Months",
-            "CGST",
-            "SGST",
-            val_col,
+            "Base Rent Value",
+            "CGST (9%)",
+            "SGST (9%)",
+            "Total Rent with 18% Tax",
         ]
-        # డేటాలో ఉన్న కాలమ్స్ మాత్రమే ఎంచుకోవడం
         existing_cols = [c for c in desired_cols if c and c in sup_invoices.columns]
         other_cols = [
             c for c in sup_invoices.columns if c not in existing_cols
@@ -833,10 +892,7 @@ elif page == "9. AKG Shutterings Ledger":
         else:
           st.info("No payment transactions recorded for this vendor yet.")
       else:
-        st.warning(
-            "No records found for 'AKG SHUTTERINGS PRIVATE LIMITED' in the"
-            " dataset."
-        )
+        st.warning("No records found for 'AKG SHUTTERINGS PRIVATE LIMITED'.")
     else:
       st.error("Supplier column not detected in dataset.")
   else:
