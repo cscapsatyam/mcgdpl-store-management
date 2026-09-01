@@ -469,17 +469,39 @@ elif page == "7. Vendor Payments Entry":
               )
 
             st.markdown("---")
-            sup_invoices = (
-                df[df[sup_col] == selected_summary_sup]
-                .copy()
-                .reset_index(drop=True)
-            )
-            if "S.No" in sup_invoices.columns:
-              sup_invoices["S.No"] = range(1, len(sup_invoices) + 1)
-            else:
-              sup_invoices.insert(0, "S.No", range(1, len(sup_invoices) + 1))
 
-            st.markdown(f"### 📂 Invoice Line Items")
+            # --- INVOICE WISE CONSOLIDATED VIEW (FIXED) ---
+            sup_invoices_raw = df[df[sup_col] == selected_summary_sup].copy()
+
+            if inv_col in sup_invoices_raw.columns:
+              # అదనపు కాలమ్స్ ఏమైనా ఉంటే వాటిని చెక్ చేసి గ్రూప్ చేద్దాం
+              optional_cols = [
+                  "Store Entry No",
+                  "Invoice Date",
+                  "GRN No",
+                  "GRN Date",
+                  "Vechile Number",
+                  "Type Reciept",
+              ]
+              available_extra = [
+                  c for c in optional_cols if c in sup_invoices_raw.columns
+              ]
+              group_cols = [inv_col] + available_extra
+
+              # ఒకే ఇన్‌వాయిస్ కింద ఉన్న మెటీరియల్స్ అన్నింటి వాల్యూస్‌ని కలిపి సింగిల్ రో కి మార్చుతాం
+              sup_invoices = (
+                  sup_invoices_raw.groupby(group_cols)[val_col]
+                  .sum()
+                  .reset_index()
+                  .rename(columns={val_col: "Total Invoice Value"})
+              )
+            else:
+              sup_invoices = sup_invoices_raw
+
+            sup_invoices = sup_invoices.reset_index(drop=True)
+            sup_invoices.insert(0, "S.No", range(1, len(sup_invoices) + 1))
+
+            st.markdown(f"### 📂 Invoice-Wise Summary")
             st.data_editor(
                 sup_invoices,
                 hide_index=True,
