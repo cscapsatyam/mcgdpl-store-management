@@ -60,16 +60,22 @@ if page == "1. Home / Dashboard":
     # రోస్ సంఖ్యను బట్టి హైట్ ఆటోమేటిక్‌గా మారేలా సెట్ చేయడం
     calc_height = min(max(len(df) * 38 + 40, 150), 500)
 
-    # కాలమ్స్ సైజులను కంట్రోల్ చేయడానికి Column Configuration
+    # ఎర్రర్ రాకుండా సురక్షితమైన కాలమ్ కాన్ఫిగరేషన్ (అన్నీ TextColumn గా మార్చడం)
     column_config = {
-        "S.No": st.column_config.NumberColumn(width="small"),
-        "Store Entry No": st.column_config.NumberColumn(width="small"),
-        "UOM": st.column_config.TextColumn(width="small"),
-        "GRN No": st.column_config.TextColumn(width="small"),
-        "PO No": st.column_config.TextColumn(width="small"),
-        "Invoice No": st.column_config.TextColumn(width="medium"),
-        "Supplier / Sendor Name": st.column_config.TextColumn(width="large"),
-        "Description Of material": st.column_config.TextColumn(width="large"),
+        "S.No": st.column_config.TextColumn("S.No", width="small"),
+        "Store Entry No": st.column_config.TextColumn(
+            "Store Entry No", width="small"
+        ),
+        "UOM": st.column_config.TextColumn("UOM", width="small"),
+        "GRN No": st.column_config.TextColumn("GRN No", width="small"),
+        "PO No": st.column_config.TextColumn("PO No", width="small"),
+        "Invoice No": st.column_config.TextColumn("Invoice No", width="medium"),
+        "Supplier / Sendor Name": st.column_config.TextColumn(
+            "Supplier / Sendor Name", width="large"
+        ),
+        "Description Of material": st.column_config.TextColumn(
+            "Description Of material", width="large"
+        ),
     }
 
     st.data_editor(
