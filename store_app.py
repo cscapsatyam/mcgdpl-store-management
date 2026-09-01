@@ -654,17 +654,18 @@ elif page in [
   )
   st.info("Module ready for operational deployment.")
     
-      # ================= PAGE 9: AKG SHUTTERINGS DEDICATED LEDGER =================
+  
+# ================= PAGE 9: AKG SHUTTERINGS DEDICATED LEDGER =================
 elif page == "9. AKG Shutterings Ledger":
   st.title(
-      "📑 AKG SHUTTERINGS PRIVATE LIMITED - Rental, Return Date & Tax Ledger"
+      "📑 AKG SHUTTERINGS PRIVATE LIMITED - Rental, Stock Ledger & Tax"
   )
   st.markdown(
       "Exclusive statement breakdown including Store Entry, Return Dates,"
-      " Monthly Stock Rent, and 18% Tax Calculation."
+      " Monthly Stock Rent, Stock Ledger, and 18% Tax Calculation."
   )
 
-  if not st.session_state.current_df.empty:
+  if "current_df" in st.session_state and not st.session_state.current_df.empty:
     df = st.session_state.current_df.copy()
     sup_col = "Supplier / Sendor Name"
 
@@ -675,7 +676,7 @@ elif page == "9. AKG Shutterings Ledger":
       )
 
       if not sup_invoices.empty:
-        # 1. Month-wise Value Filter
+        # 1. Month-wise Value Filter (rent breakdown కోసం మాత్రమే ఫిల్టర్)
         date_col = (
             "Actualy Recived Date"
             if "Actualy Recived Date" in sup_invoices.columns
@@ -686,98 +687,128 @@ elif page == "9. AKG Shutterings Ledger":
               sup_invoices[date_col], errors="coerce"
           ).dt.strftime("%B %Y")
           months_list = ["All Months"] + [
-              m for m in sup_invoices["Month_Year"].dropna().unique()
+              m for m in sup_invoices["Month_Year"].dropna().unique() if pd.notnull(m)
           ]
 
-          col_f1, col_f2 = st.columns([2, 4])
+          col_f1, _ = st.columns([2, 4])
           with col_f1:
             selected_month = st.selectbox(
-                "📅 Filter by Month & Year:", months_list, key="akg_month_filter"
+                "📅 Filter by Month & Year (Rent Table Only):", months_list, key="akg_month_filter"
             )
 
+          filtered_sup_invoices = sup_invoices.copy()
           if selected_month != "All Months":
-            sup_invoices = sup_invoices[
-                sup_invoices["Month_Year"] == selected_month
+            filtered_sup_invoices = filtered_sup_invoices[
+                filtered_sup_invoices["Month_Year"] == selected_month
             ]
+        else:
+          filtered_sup_invoices = sup_invoices.copy()
 
         # 2. డే-వైస్, మంత్లీ రెంట్ మరియు 18% టాక్స్ కాలిక్యులేషన్ లాజిక్
-        if "Actualy Recived Date" in sup_invoices.columns:
-          sup_invoices["Actualy Recived Date DT"] = pd.to_datetime(
-              sup_invoices["Actualy Recived Date"], errors="coerce"
+        if "Actualy Recived Date" in filtered_sup_invoices.columns:
+          filtered_sup_invoices["Actualy Recived Date DT"] = pd.to_datetime(
+              filtered_sup_invoices["Actualy Recived Date"], errors="coerce"
           )
 
-          # మెయిన్ డేటాఫ్రేమ్ లో Return Date కాలమ్ ఉందో లేదో చెక్ చేయడం
-          if "Return Date" not in sup_invoices.columns:
-            sup_invoices["Return Date"] = None
+          if "Return Date" not in filtered_sup_invoices.columns:
+            filtered_sup_invoices["Return Date"] = None
 
-          sup_invoices["Return Date DT"] = pd.to_datetime(
-              sup_invoices["Return Date"], errors="coerce"
+          filtered_sup_invoices["Return Date DT"] = pd.to_datetime(
+              filtered_sup_invoices["Return Date"], errors="coerce"
           )
-          # ఒకవేళ రిటర్న్ డేట్ లేకపోతే ప్రస్తుత తేదీని (Current Date) రన్నింగ్ మెటీరియల్స్ కోసం కౌంట్ చేయడం
-          effective_return_dt = sup_invoices["Return Date DT"].fillna(
+          effective_return_dt = filtered_sup_invoices["Return Date DT"].fillna(
               pd.to_datetime("today")
           )
 
-          sup_invoices["Total Days"] = (
-              effective_return_dt - sup_invoices["Actualy Recived Date DT"]
+          filtered_sup_invoices["Total Days"] = (
+              effective_return_dt - filtered_sup_invoices["Actualy Recived Date DT"]
           ).dt.days
-          sup_invoices["Total Days"] = sup_invoices["Total Days"].fillna(1)
-          sup_invoices["Total Days"] = sup_invoices["Total Days"].apply(
+          filtered_sup_invoices["Total Days"] = filtered_sup_invoices["Total Days"].fillna(1)
+          filtered_sup_invoices["Total Days"] = filtered_sup_invoices["Total Days"].apply(
               lambda x: max(int(x), 1)
           )
 
-          sup_invoices["Calculated Months"] = (
-              sup_invoices["Total Days"] / 30.0
+          filtered_sup_invoices["Calculated Months"] = (
+              filtered_sup_invoices["Total Days"] / 30.0
           ).round(2)
 
         possible_qty_cols = ["Qty", "Quantity", "Nos"]
         possible_rate_cols = ["Rate", "Unit Rate", "Rent Rate"]
 
         qty_col = next(
-            (c for c in possible_qty_cols if c in sup_invoices.columns), None
+            (c for c in possible_qty_cols if c in filtered_sup_invoices.columns), "Qty"
         )
         rate_col = next(
-            (c for c in possible_rate_cols if c in sup_invoices.columns), None
+            (c for c in possible_rate_cols if c in filtered_sup_invoices.columns), "Rate"
         )
 
-        if qty_col and rate_col:
-          sup_invoices[qty_col] = pd.to_numeric(
-              sup_invoices[qty_col].astype(str).str.replace(r"[^\d.]", "", regex=True),
-              errors="coerce",
-          ).fillna(0)
-          sup_invoices[rate_col] = pd.to_numeric(
-              sup_invoices[rate_col]
-              .astype(str)
-              .str.replace(r"[^\d.]", "", regex=True),
-              errors="coerce",
-          ).fillna(0)
+        if qty_col not in filtered_sup_invoices.columns:
+          filtered_sup_invoices[qty_col] = 1.0
+        if rate_col not in filtered_sup_invoices.columns:
+          filtered_sup_invoices[rate_col] = 0.0
 
-          # బేసిక్ రెంట్ = Qty * Rate * Calculated Months
-          sup_invoices["Base Rent Value"] = (
-              sup_invoices[qty_col]
-              * sup_invoices[rate_col]
-              * sup_invoices["Calculated Months"]
-          ).round(2)
-        else:
-          sup_invoices["Base Rent Value"] = 0.0
+        filtered_sup_invoices[qty_col] = pd.to_numeric(
+            filtered_sup_invoices[qty_col]
+            .astype(str)
+            .str.replace(r"[^\d.]", "", regex=True),
+            errors="coerce",
+        ).fillna(0)
+        filtered_sup_invoices[rate_col] = pd.to_numeric(
+            filtered_sup_invoices[rate_col]
+            .astype(str)
+            .str.replace(r"[^\d.]", "", regex=True),
+            errors="coerce",
+        ).fillna(0)
 
-        # డిఫాల్ట్ 18% టాక్స్ (CGST 9% + SGST 9%) ఆటోమేటిక్ కాలిక్యులేషన్
-        sup_invoices["CGST (9%)"] = (sup_invoices["Base Rent Value"] * 0.09).round(2)
-        sup_invoices["SGST (9%)"] = (sup_invoices["Base Rent Value"] * 0.09).round(2)
-        sup_invoices["Total Rent with 18% Tax"] = (
-            sup_invoices["Base Rent Value"]
-            + sup_invoices["CGST (9%)"]
-            + sup_invoices["SGST (9%)"]
+        filtered_sup_invoices["Base Rent Value"] = (
+            filtered_sup_invoices[qty_col]
+            * filtered_sup_invoices[rate_col]
+            * filtered_sup_invoices["Calculated Months"]
+        ).round(2)
+        filtered_sup_invoices["CGST (9%)"] = (filtered_sup_invoices["Base Rent Value"] * 0.09).round(2)
+        filtered_sup_invoices["SGST (9%)"] = (filtered_sup_invoices["Base Rent Value"] * 0.09).round(2)
+        filtered_sup_invoices["Total Rent with 18% Tax"] = (
+            filtered_sup_invoices["Base Rent Value"]
+            + filtered_sup_invoices["CGST (9%)"]
+            + filtered_sup_invoices["SGST (9%)"]
         ).round(2)
 
-        if "S.No" in sup_invoices.columns:
-          sup_invoices["S.No"] = range(1, len(sup_invoices) + 1)
+        if "S.No" in filtered_sup_invoices.columns:
+          filtered_sup_invoices["S.No"] = range(1, len(filtered_sup_invoices) + 1)
         else:
-          sup_invoices.insert(0, "S.No", range(1, len(sup_invoices) + 1))
+          filtered_sup_invoices.insert(0, "S.No", range(1, len(filtered_sup_invoices) + 1))
 
-        total_inv_amt = sup_invoices["Total Rent with 18% Tax"].sum()
+        # మొత్తం ఇన్‌వాయిస్ అమౌంట్ అన్ని నెలలకి కలిపి లెక్కింపు
+        sup_invoices[qty_col] = pd.to_numeric(
+            sup_invoices[qty_col].astype(str).str.replace(r"[^\d.]", "", regex=True), errors="coerce"
+        ).fillna(0)
+        
+        # అన్ని నెలల టోటల్ రెంట్ వాల్యూ కోసం పూర్తి డేటాను లెక్కించడం
+        full_calc_df = sup_invoices.copy()
+        if "Actualy Recived Date" in full_calc_df.columns:
+          full_calc_df["Actualy Recived Date DT"] = pd.to_datetime(full_calc_df["Actualy Recived Date"], errors="coerce")
+          if "Return Date" not in full_calc_df.columns:
+            full_calc_df["Return Date"] = None
+          full_calc_df["Return Date DT"] = pd.to_datetime(full_calc_df["Return Date"], errors="coerce")
+          eff_ret = full_calc_df["Return Date DT"].fillna(pd.to_datetime("today"))
+          full_calc_df["Total Days"] = (eff_ret - full_calc_df["Actualy Recived Date DT"]).dt.days.apply(lambda x: max(int(x), 1))
+          full_calc_df["Calculated Months"] = (full_calc_df["Total Days"] / 30.0).round(2)
+        else:
+          full_calc_df["Calculated Months"] = 1.0
 
-        if not st.session_state.payments_df.empty:
+        if rate_col in full_calc_df.columns:
+          full_calc_df[rate_col] = pd.to_numeric(
+              full_calc_df[rate_col].astype(str).str.replace(r"[^\d.]", "", regex=True), errors="coerce"
+          ).fillna(0)
+        else:
+          full_calc_df[rate_col] = 0.0
+
+        full_calc_df["Base Rent Value"] = (full_calc_df[qty_col] * full_calc_df[rate_col] * full_calc_df["Calculated Months"]).round(2)
+        full_calc_df["Total Rent with 18% Tax"] = (full_calc_df["Base Rent Value"] * 1.18).round(2)
+        
+        total_inv_amt = full_calc_df["Total Rent with 18% Tax"].sum()
+
+        if "payments_df" in st.session_state and not st.session_state.payments_df.empty:
           sup_payments = (
               st.session_state.payments_df[
                   st.session_state.payments_df["Supplier Name"] == target_supplier
@@ -804,133 +835,135 @@ elif page == "9. AKG Shutterings Ledger":
 
         st.markdown("---")
 
-        # Buttons for Popups (Payment & Material/Return Updates)
-        col_btn1, col_btn2 = st.columns(2)
-        with col_btn1:
-          if st.button("💳 Add Payment for AKG Shutterings", key="btn_pay_akg"):
-            st.session_state["show_akg_pay_popup"] = True
-        with col_btn2:
-          if st.button(
-              "✏️ Update Return Date / Rates (Running Material)",
-              key="btn_rent_popup",
-          ):
-            st.session_state["show_akg_rent_popup"] = True
+        # Expander for Updates
+        with st.expander(
+            "✏️ Click Here to Update Return Date, Qty & Rates / Add Payment",
+            expanded=False,
+        ):
+          tab_p1, tab_p2 = st.tabs(["📦 Update Material & Return", "💳 Add Payment"])
 
-        # 1. Payment Popup Form
-        if st.session_state.get("show_akg_pay_popup", False):
-          with st.form("akg_payment_form"):
-            st.subheader("Add Payment Entry — AKG Shutterings")
-            p_vendor = st.text_input(
-                "Vendor Name", value=target_supplier, disabled=True
-            )
-            p_date = st.date_input("Payment Date")
-            p_amount = st.number_input(
-                "Paid Amount (₹)", min_value=0.0, format="%.2f"
-            )
-            p_mode = st.selectbox(
-                "Payment Mode", ["Bank Transfer", "Cheque", "UPI", "Cash"]
-            )
-            p_ref = st.text_input("Reference / Transaction ID")
-
-            submitted_pay = st.form_submit_button("Save Payment")
-            if submitted_pay:
-              new_pay_row = {
-                  "Supplier Name": target_supplier,
-                  "Payment Date": str(p_date),
-                  "Paid Amount": p_amount,
-                  "Payment Mode": p_mode,
-                  "Reference No": p_ref,
-              }
-              st.session_state.payments_df = pd.concat(
-                  [
-                      st.session_state.payments_df,
-                      pd.DataFrame([new_pay_row]),
-                  ],
-                  ignore_index=True,
+          with tab_p1:
+            with st.form("akg_rent_form"):
+              st.subheader("Update Material Return Date, Qty & Rate")
+              entry_col_name = (
+                  "Store Entry No"
+                  if "Store Entry No" in sup_invoices.columns
+                  else sup_invoices.columns[0]
               )
-              st.session_state["show_akg_pay_popup"] = False
-              st.success("Payment saved successfully!")
-              st.rerun()
+              entry_list = list(sup_invoices[entry_col_name].dropna().unique())
 
-        # 2. Return Date, Quantity & Rate Popup Form (రన్నింగ్ లేదా రిటర్న్ మెటీరియల్స్ కోసం)
-        if st.session_state.get("show_akg_rent_popup", False):
-          with st.form("akg_rent_form"):
-            st.subheader(
-                "Update Material Return Date, Qty & Rate — AKG Shutterings"
-            )
-            st.info(
-                "ఇక్కడ మీరు స్టోర్ ఎంట్రీ నెంబర్‌ను సెలెక్ట్ చేసి మెటీరియల్"
-                " రిటర్న్ తేదీని, రేటును లేదా క్వాంటిటీని అప్‌డేట్ చేయవచ్చు."
-            )
+              if entry_list:
+                selected_entry = st.selectbox(
+                    "Select Store Entry No:", entry_list
+                )
 
-            entry_list = list(sup_invoices["Store Entry No"].dropna().unique())
-            selected_entry = st.selectbox(
-                "Select Store Entry No:", entry_list
-            )
+                curr_row = sup_invoices[
+                    sup_invoices[entry_col_name] == selected_entry
+                ].iloc[0]
+                curr_qty = float(curr_row.get(qty_col, 1.0))
+                curr_rate = float(curr_row.get(rate_col, 0.0))
 
-            curr_row = sup_invoices[
-                sup_invoices["Store Entry No"] == selected_entry
-            ].iloc[0]
-            curr_qty = float(curr_row.get(qty_col, 1.0))
-            curr_rate = float(curr_row.get(rate_col, 0.0))
+                existing_ret_date = curr_row.get("Return Date")
+                default_date = (
+                    pd.to_datetime(existing_ret_date).date()
+                    if pd.notnull(existing_ret_date)
+                    else datetime.date.today()
+                )
 
-            # ప్రస్తుత రిటర్న్ డేట్ ఉంటే దాన్ని చూపించడం, లేకపోతే టుడే డేట్
-            existing_ret_date = curr_row.get("Return Date")
-            default_date = (
-                pd.to_datetime(existing_ret_date).date()
-                if pd.notnull(existing_ret_date)
-                else datetime.date.today()
-            )
+                col_e1, col_e2 = st.columns(2)
+                with col_e1:
+                  new_qty = st.number_input(
+                      "Quantity", value=curr_qty, min_value=0.0, format="%.2f"
+                  )
+                  is_returned = st.checkbox(
+                      "Has Material Been Returned?",
+                      value=True if pd.notnull(existing_ret_date) else False,
+                  )
+                with col_e2:
+                  new_rate = st.number_input(
+                      "Monthly Rent Rate (₹)",
+                      value=curr_rate,
+                      min_value=0.0,
+                      format="%.2f",
+                  )
+                  new_return_date = st.date_input(
+                      "Material Return Date", value=default_date
+                  )
 
-            new_qty = st.number_input(
-                "Quantity", value=curr_qty, min_value=0.0, format="%.2f"
-            )
-            new_rate = st.number_input(
-                "Monthly Rent Rate (₹)",
-                value=curr_rate,
-                min_value=0.0,
-                format="%.2f",
-            )
-            is_returned = st.checkbox(
-                "Has Material Been Returned?",
-                value=True if pd.notnull(existing_ret_date) else False,
-            )
-            new_return_date = st.date_input(
-                "Material Return Date", value=default_date
-            )
+                submitted_rent = st.form_submit_button(
+                    "Save & Recalculate Rent"
+                )
+                if submitted_rent:
+                  final_ret_val = (
+                      str(new_return_date) if is_returned else None
+                  )
 
-            submitted_rent = st.form_submit_button(
-                "Update Record & Calculate Rent"
-            )
-            if submitted_rent:
-              final_ret_val = (
-                  str(new_return_date) if is_returned else None
+                  if "Return Date" not in df.columns:
+                    df["Return Date"] = None
+
+                  df.loc[
+                      (df[sup_col] == target_supplier)
+                      & (df[entry_col_name] == selected_entry),
+                      qty_col,
+                  ] = new_qty
+                  df.loc[
+                      (df[sup_col] == target_supplier)
+                      & (df[entry_col_name] == selected_entry),
+                      rate_col,
+                  ] = new_rate
+                  df.loc[
+                      (df[sup_col] == target_supplier)
+                      & (df[entry_col_name] == selected_entry),
+                      "Return Date",
+                  ] = final_ret_val
+
+                  st.session_state.current_df = df
+                  st.success("Updated successfully!")
+                  st.rerun()
+              else:
+                st.warning("No store entries found.")
+
+          with tab_p2:
+            with st.form("akg_payment_form"):
+              st.subheader("Add Payment Entry")
+              st.text_input("Vendor Name", value=target_supplier, disabled=True)
+              p_date = st.date_input("Payment Date")
+              p_amount = st.number_input(
+                  "Paid Amount (₹)", min_value=0.0, format="%.2f"
               )
+              p_mode = st.selectbox(
+                  "Payment Mode", ["Bank Transfer", "Cheque", "UPI", "Cash"]
+              )
+              p_ref = st.text_input("Reference / Transaction ID")
 
-              # మెయిన్ డేటాఫ్రేమ్‌లో వాల్యూస్ అప్‌డేట్ చేయడం
-              if "Return Date" not in df.columns:
-                df["Return Date"] = None
-
-              df.loc[
-                  (df[sup_col] == target_supplier)
-                  & (df["Store Entry No"] == selected_entry),
-                  qty_col,
-              ] = new_qty
-              df.loc[
-                  (df[sup_col] == target_supplier)
-                  & (df["Store Entry No"] == selected_entry),
-                  rate_col,
-              ] = new_rate
-              df.loc[
-                  (df[sup_col] == target_supplier)
-                  & (df["Store Entry No"] == selected_entry),
-                  "Return Date",
-              ] = final_ret_val
-
-              st.session_state.current_df = df
-              st.session_state["show_akg_rent_popup"] = False
-              st.success("Return date and parameters updated successfully!")
-              st.rerun()
+              submitted_pay = st.form_submit_button("Save Payment")
+              if submitted_pay:
+                new_pay_row = {
+                    "Supplier Name": target_supplier,
+                    "Payment Date": str(p_date),
+                    "Paid Amount": p_amount,
+                    "Payment Mode": p_mode,
+                    "Reference No": p_ref,
+                }
+                if "payments_df" not in st.session_state:
+                  st.session_state.payments_df = pd.DataFrame(
+                      columns=[
+                          "Supplier Name",
+                          "Payment Date",
+                          "Paid Amount",
+                          "Payment Mode",
+                          "Reference No",
+                      ]
+                  )
+                st.session_state.payments_df = pd.concat(
+                    [
+                        st.session_state.payments_df,
+                        pd.DataFrame([new_pay_row]),
+                    ],
+                    ignore_index=True,
+                )
+                st.success("Payment saved successfully!")
+                st.rerun()
 
         st.markdown("---")
         st.subheader(
@@ -955,11 +988,11 @@ elif page == "9. AKG Shutterings Ledger":
             "SGST (9%)",
             "Total Rent with 18% Tax",
         ]
-        existing_cols = [c for c in desired_cols if c and c in sup_invoices.columns]
+        existing_cols = [c for c in desired_cols if c and c in filtered_sup_invoices.columns]
         other_cols = [
-            c for c in sup_invoices.columns if c not in existing_cols
+            c for c in filtered_sup_invoices.columns if c not in existing_cols
         ]
-        ordered_sup_invoices = sup_invoices[existing_cols + other_cols]
+        ordered_sup_invoices = filtered_sup_invoices[existing_cols + other_cols]
 
         st.data_editor(
             ordered_sup_invoices,
@@ -968,6 +1001,57 @@ elif page == "9. AKG Shutterings Ledger":
             disabled=True,
             key="akg_inv_table",
         )
+
+        # ================= STOCK LEDGER SUMMARY (ALL MONTHS / UP TO DATE) =================
+        st.markdown("---")
+        st.subheader("📦 Material Stock Ledger Summary (All Months / Cumulative Up to Date)")
+
+        mat_desc_col = next(
+            (
+                c
+                for c in [
+                    "Description Of material",
+                    "Material Name",
+                    "Item Description",
+                ]
+                if c in sup_invoices.columns
+            ),
+            None,
+        )
+
+        if mat_desc_col:
+          # మొత్తం sup_invoices (అన్ని నెలలు కలిపి) డేటా ఆధారంగా స్టాక్ లెడ్జర్‌ను లెక్కించడం
+          sup_invoices["Is Returned Flag"] = sup_invoices["Return Date"].notnull()
+
+          stock_summary = (
+              sup_invoices.groupby(mat_desc_col)
+              .agg(
+                  Total_Received_Qty=(qty_col, "sum"),
+                  Returned_Qty=(
+                      qty_col,
+                      lambda x: sum(
+                          x[sup_invoices.loc[x.index, "Is Returned Flag"]]
+                      ),
+                  ),
+              )
+              .reset_index()
+          )
+
+          stock_summary["Running Stock At Site"] = (
+              stock_summary["Total_Received_Qty"]
+              - stock_summary["Returned_Qty"]
+          )
+          stock_summary.insert(0, "S.No", range(1, len(stock_summary) + 1))
+
+          st.data_editor(
+              stock_summary,
+              hide_index=True,
+              use_container_width=True,
+              disabled=True,
+              key="akg_stock_ledger_table",
+          )
+        else:
+          st.info("Material description column not found for stock ledger.")
 
         st.markdown("---")
         st.subheader("💳 Payment Disbursement Log — AKG Shutterings")
