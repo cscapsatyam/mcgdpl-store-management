@@ -195,7 +195,9 @@ if page == "1. Dashboard / Home":
         st.markdown(
             """
                 <script>
-                window.print();
+                setTimeout(function() {
+                    window.print();
+                }, 500);
                 </script>
                 """,
             unsafe_allow_html=True,
@@ -290,7 +292,9 @@ elif page == "6. Invoice Wise Total Value":
             st.markdown(
                 """
                     <script>
-                    window.print();
+                    setTimeout(function() {
+                        window.print();
+                    }, 500);
                     </script>
                     """,
                 unsafe_allow_html=True,
@@ -451,18 +455,17 @@ elif page == "7. Vendor Payments Entry":
               f"📜 Payment History Log — {selected_summary_sup}", width="large"
           )
           def show_history_popup():
-            if st.button("🖨️ Print / Save as PDF", key="..."):
-  st.markdown(
-      """
-        <script>
-        setTimeout(function() {
-            window.print();
-        }, 500);
-        </script>
-        """,
-      unsafe_allow_html=True,
-  )  
-            
+            if st.button("🖨️ Print / Save as PDF", key="print_history_popup"):
+              st.markdown(
+                  """
+                            <script>
+                            setTimeout(function() {
+                                window.print();
+                            }, 500);
+                            </script>
+                            """,
+                  unsafe_allow_html=True,
+              )
 
             st.markdown("---")
             if not st.session_state.payments_df.empty:
@@ -502,7 +505,9 @@ elif page == "7. Vendor Payments Entry":
               st.markdown(
                   """
                             <script>
-                            window.print();
+                            setTimeout(function() {
+                                window.print();
+                            }, 500);
                             </script>
                             """,
                   unsafe_allow_html=True,
@@ -645,7 +650,9 @@ elif page == "8. Vendor Statement & Ledger":
           st.markdown(
               """
                   <script>
-                  window.print();
+                  setTimeout(function() {
+                      window.print();
+                  }, 500);
                   </script>
                   """,
               unsafe_allow_html=True,
