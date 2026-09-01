@@ -7,7 +7,7 @@ st.set_page_config(
     page_title="Enterprise Store Management System", layout="wide"
 )
 
-# Custom Styling for Professional ERP Look
+# Custom Styling with Professional ERP Look & A4 Border Print Layout
 st.markdown(
     """
     <style>
@@ -34,6 +34,60 @@ st.markdown(
         border-radius: 6px;
         box-shadow: 0 2px 4px rgba(0,0,0,0.05);
     }
+
+    /* --- A4 SIZE PDF & PRINT STYLING WITH BORDER DESIGN --- */
+    @media print {
+        @page {
+            size: A4 portrait;
+            margin: 10mm;
+        }
+        
+        header, footer, nav, .stSidebar, div[data-testid="stSidebar"], button {
+            display: none !important;
+        }
+        
+        body {
+            background: white !important;
+            color: black !important;
+            font-family: Arial, sans-serif !important;
+            font-size: 11pt;
+        }
+        
+        .main, .block-container {
+            padding: 15px !important;
+            margin: 0 !important;
+            width: 100% !important;
+            border: 3px double #333333 !important;
+            box-sizing: border-box;
+        }
+
+        div[data-baseweb="modal"] {
+            position: absolute !important;
+            left: 0 !important;
+            top: 0 !important;
+            width: 100% !important;
+            background: white !important;
+            border: 3px double #333333 !important;
+            padding: 20px !important;
+        }
+
+        table {
+            width: 100% !important;
+            border-collapse: collapse !important;
+            margin-top: 10px;
+        }
+        th, td {
+            border: 1px solid #666666 !important;
+            padding: 6px 8px !important;
+            text-align: left;
+            font-size: 10pt;
+        }
+        th {
+            background-color: #e9ecef !important;
+            color: black !important;
+            -webkit-print-color-adjust: exact;
+        }
+    }
     </style>
     """,
     unsafe_allow_html=True,
@@ -43,7 +97,6 @@ st.markdown(
 if "current_df" not in st.session_state:
   st.session_state.current_df = pd.DataFrame()
 
-# Payments data file path for permanent storage
 PAYMENTS_FILE = "payments_data.csv"
 
 if "payments_df" not in st.session_state:
@@ -71,7 +124,6 @@ if "payments_df" not in st.session_state:
         ]
     )
 
-# Automatically load Book1.xlsx from GitHub
 if st.session_state.current_df.empty:
   try:
     df_auto = pd.read_excel("Book1.xlsx", sheet_name=0)
@@ -90,7 +142,6 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-# Horizontal Tabs for Modules
 page = st.radio(
     "Navigation Menu",
     [
@@ -392,7 +443,7 @@ elif page == "7. Vendor Payments Entry":
 
           show_payment_popup()
 
-      # 2. VIEW PAYMENT HISTORY POPUP BUTTON
+      # 2. VIEW PAYMENT HISTORY POPUP BUTTON (WITH PDF / PRINT OPTION)
       with b_col2:
         if st.button("📜 View Payment History", use_container_width=True):
 
@@ -400,6 +451,17 @@ elif page == "7. Vendor Payments Entry":
               f"📜 Payment History Log — {selected_summary_sup}", width="large"
           )
           def show_history_popup():
+            if st.button("🖨️ Print / Save as PDF", key="print_history_popup"):
+              st.markdown(
+                  """
+                            <script>
+                            window.print();
+                            </script>
+                            """,
+                  unsafe_allow_html=True,
+              )
+
+            st.markdown("---")
             if not st.session_state.payments_df.empty:
               sup_hist = (
                   st.session_state.payments_df[
@@ -424,7 +486,7 @@ elif page == "7. Vendor Payments Entry":
 
           show_history_popup()
 
-      # 3. VENDOR STATEMENT & LEDGER REPORT POPUP BUTTON
+      # 3. VENDOR STATEMENT & LEDGER REPORT POPUP BUTTON (WITH PDF / PRINT OPTION)
       with b_col3:
         if st.button("📑 Full Statement & Ledger", use_container_width=True):
 
@@ -433,6 +495,17 @@ elif page == "7. Vendor Payments Entry":
               width="large",
           )
           def show_ledger_popup():
+            if st.button("🖨️ Print / Save as PDF", key="print_ledger_popup"):
+              st.markdown(
+                  """
+                            <script>
+                            window.print();
+                            </script>
+                            """,
+                  unsafe_allow_html=True,
+              )
+
+            st.markdown("---")
             sup_invoices = (
                 df[df[sup_col] == selected_summary_sup]
                 .copy()
@@ -443,7 +516,7 @@ elif page == "7. Vendor Payments Entry":
             else:
               sup_invoices.insert(0, "S.No", range(1, len(sup_invoices) + 1))
 
-            st.markdown(f"### 📂 Invoice History")
+            st.markdown(f"### 📂 Invoice Line Items")
             st.data_editor(
                 sup_invoices,
                 hide_index=True,
@@ -484,7 +557,6 @@ elif page == "7. Vendor Payments Entry":
       st.error("Required supplier or valuation columns missing from dataset.")
   else:
     st.info("Please load data records first.")
-
 
 # ================= PAGE 8: VENDOR STATEMENT & LEDGER =================
 elif page == "8. Vendor Statement & Ledger":
@@ -576,7 +648,7 @@ elif page == "8. Vendor Statement & Ledger":
               unsafe_allow_html=True,
           )
 
-      st.subheader(f"📂 Invoice History — {selected_supplier_det}")
+      st.subheader(f"📂 Invoice Line Items — {selected_supplier_det}")
       st.data_editor(
           sup_invoices,
           hide_index=True,
