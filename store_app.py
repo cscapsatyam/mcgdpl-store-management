@@ -57,8 +57,20 @@ if page == "1. Home / Dashboard":
 
     st.markdown("---")
 
-    # రోస్ సంఖ్యను బట్టి హైట్ ఆటోమేటిక్‌గా మారేలా సెట్ చేయడం (ప్రతి రో కి సుమారు 35 పిక్సెల్స్)
+    # రోస్ సంఖ్యను బట్టి హైట్ ఆటోమేటిక్‌గా మారేలా సెట్ చేయడం
     calc_height = min(max(len(df) * 38 + 40, 150), 500)
+
+    # కాలమ్స్ సైజులను కంట్రోల్ చేయడానికి Column Configuration
+    column_config = {
+        "S.No": st.column_config.NumberColumn(width="small"),
+        "Store Entry No": st.column_config.NumberColumn(width="small"),
+        "UOM": st.column_config.TextColumn(width="small"),
+        "GRN No": st.column_config.TextColumn(width="small"),
+        "PO No": st.column_config.TextColumn(width="small"),
+        "Invoice No": st.column_config.TextColumn(width="medium"),
+        "Supplier / Sendor Name": st.column_config.TextColumn(width="large"),
+        "Description Of material": st.column_config.TextColumn(width="large"),
+    }
 
     st.data_editor(
         df,
@@ -66,6 +78,7 @@ if page == "1. Home / Dashboard":
         use_container_width=True,
         disabled=True,
         height=calc_height,
+        column_config=column_config,
     )
   else:
     uploaded_file = st.file_uploader(
