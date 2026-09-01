@@ -316,14 +316,12 @@ elif page == "7. Vendor Payments Entry":
       st.markdown("---")
       st.subheader("📋 Selected Supplier Financial Standing:")
 
-      # డ్రాప్‌డౌన్ లేదా సెలెక్ట్ చేసుకున్న సప్లையర్ కోసం ఫిల్టర్
       selected_summary_sup = st.selectbox(
           "🔍 View Financial Summary for Supplier:",
           suppliers_unique,
           key="summary_sup_select",
       )
 
-      # ఆ ఒక్క సప్లையర్ డేటా మాత్రమే తీసుకోవడం
       sup_filtered_df = df[df[sup_col] == selected_summary_sup]
       total_inv_amt = sup_filtered_df[val_col].sum()
 
@@ -338,7 +336,6 @@ elif page == "7. Vendor Payments Entry":
 
       net_out = total_inv_amt - total_paid_amt
 
-      # సమ్మరీని నీట్‌గా మెట్రిక్స్ మరియు టేబుల్ రూపంలో చూపించడం
       m_col1, m_col2, m_col3 = st.columns(3)
       m_col1.metric("Total Invoice Amount", f"₹ {total_inv_amt:,.2f}")
       m_col2.metric("Total Paid Amount", f"₹ {total_paid_amt:,.2f}")
@@ -361,32 +358,44 @@ elif page == "7. Vendor Payments Entry":
           disabled=True,
       )
 
-      if not st.session_state.payments_df.empty:
-        st.markdown("---")
-        st.subheader(f"📜 Payment History Log — {selected_summary_sup}")
-        sup_hist = (
-            st.session_state.payments_df[
-                st.session_state.payments_df["Supplier Name"]
-                == selected_summary_sup
-            ]
-            .copy()
-            .reset_index(drop=True)
+      # --- POP-UP MODAL WINDOW FOR PAYMENT HISTORY ---
+      st.markdown("---")
+      if st.button(f"📜 View Payment History for {selected_summary_sup}"):
+        @st.dialog(
+            f"📜 Payment History Log — {selected_summary_sup}", width="large"
         )
-        if not sup_hist.empty:
-          sup_hist.insert(0, "S.No", range(1, len(sup_hist) + 1))
-          st.data_editor(
-              sup_hist,
-              hide_index=True,
-              use_container_width=True,
-              disabled=True,
-          )
-        else:
-          st.info(f"No payment history found for {selected_summary_sup}.")
+        def show_history_popup():
+          if not st.session_state.payments_df.empty:
+            sup_hist = (
+                st.session_state.payments_df[
+                    st.session_state.payments_df["Supplier Name"]
+                    == selected_summary_sup
+                ]
+                .copy()
+                .reset_index(drop=True)
+            )
+            if not sup_hist.empty:
+              sup_hist.insert(0, "S.No", range(1, len(sup_hist) + 1))
+              st.data_editor(
+                  sup_hist,
+                  hide_index=True,
+                  use_container_width=True,
+                  disabled=True,
+              )
+            else:
+              st.info(f"No payment history found for {selected_summary_sup}.")
+          else:
+            st.info("No payments recorded yet.")
+
+        show_history_popup()
+
     else:
       st.error("Required supplier or valuation columns missing from dataset.")
   else:
     st.info("Please load data records first.")
-      
+
+
+ 
 
 
 # ================= PAGE 8: VENDOR STATEMENT & LEDGER =================
