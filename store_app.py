@@ -40,55 +40,17 @@ if page == "1. Home / Dashboard":
     st.success("✅ డేటా ఆటోమేటిక్‌గా లోడ్ చేయబడింది!")
     df = st.session_state.current_df.copy()
 
-    # హెడర్ కిందే డ్రాప్-డౌన్ ఫిల్టర్స్ (Columns లో సెట్ చేయడం)
-    st.markdown("### 🔍 ఫిల్టర్ ఆప్షన్స్:")
-    col1, col2 = st.columns(2)
+    st.markdown(
+        "### 📊 లోడ్ అయిన డేటా వివరాలు (ఇంటరాక్టివ్ గ్రిడ్ & హెడర్ సెర్చ్):"
+    )
 
-    supplier_col = "Supplier / Sendor Name"
-    if supplier_col in df.columns:
-      suppliers = ["అన్నీ (All)"] + list(df[supplier_col].dropna().unique())
-      selected_supplier = col1.selectbox(
-          "Supplier / Sendor Name ఫిల్టర్:", suppliers
-      )
-      if selected_supplier != "అన్నీ (All)":
-        df = df[df[supplier_col] == selected_supplier]
-
-    receipt_col = "Type Reciept"
-    if receipt_col in df.columns:
-      receipts = ["అన్నీ (All)"] + list(df[receipt_col].dropna().unique())
-      selected_receipt = col2.selectbox("Type Reciept ఫిల్టర్:", receipts)
-      if selected_receipt != "అన్నీ (All)":
-        df = df[df[receipt_col] == selected_receipt]
-
-    st.markdown("### 📊 లోడ్ అయిన డేటా వివరాలు:")
-
-    # గ్రిడ్ లైన్స్ లేకుండా, కలర్‌ఫుల్ హెడర్స్ తో టేబుల్ డిజైన్ చేయడం కోసం Pandas Styler
-    def style_dataframe(data):
-      return (
-          data.style.set_table_styles([{
-              "selector": "th",
-              "props": [
-                  ("background-color", "#004d40"),
-                  ("color", "white"),
-                  ("font-family", "sans-serif"),
-                  ("font-size", "14px"),
-                  ("text-align", "center"),
-              ],
-          }, {
-              "selector": "td",
-              "props": [
-                  ("font-family", "sans-serif"),
-                  ("font-size", "13px"),
-                  (
-                      "border",
-                      "none",
-                  ),  # గ్రిడ్ లైన్స్ పూర్తిగా తొలగించడానికి
-              ],
-          }]).format(na_rep="")
-      )
-
-    # టేబుల్ డిస్‌ప్లే
-    st.dataframe(style_dataframe(df), hide_index=True, use_container_width=True)
+    # పైన ఉన్న డ్రాప్-డౌన్స్ తీసేసి, నేరుగా టేబుల్ లోపే ఎక్సెల్ లాగా సెర్చ్/ఎడిట్ చేసుకునేలా st.data_editor వాడటం
+    st.data_editor(
+        df,
+        hide_index=True,
+        use_container_width=True,
+        disabled=True,  # డేటా మార్చకుండా కేవలం చూడటానికి మరియు హెడర్ ద్వారా సెర్చ్ చేయడానికి
+    )
 
   else:
     st.markdown(
