@@ -56,6 +56,20 @@ if page == "1. Home / Dashboard":
         df = df[df[receipt_col] == selected_receipt]
 
     st.markdown("---")
+
+    # ప్రింట్ / PDF ఆప్షన్ కోసం బటన్
+    col_btn1, col_btn2 = st.columns([6, 1])
+    with col_btn2:
+      if st.button("🖨️ Print / PDF"):
+        st.markdown(
+            """
+                <script>
+                window.print();
+                </script>
+                """,
+            unsafe_allow_html=True,
+        )
+
     calc_height = min(max(len(df) * 38 + 40, 150), 500)
 
     st.data_editor(
@@ -87,7 +101,6 @@ elif page == "6. Invoice Wise Total Value":
     sup_col = "Supplier / Sendor Name"
     inv_col = "Invoice No"
 
-    # వాల్యూ కాలమ్ వెతకడం
     possible_val_cols = [
         "Inovice value",
         "Invoice Value",
@@ -119,7 +132,6 @@ elif page == "6. Invoice Wise Total Value":
             errors="coerce",
         ).fillna(0)
 
-        # అదనపు కాలమ్స్ (Store Entry No, Invoice Date, GRN No, GRN Date) ఎక్సెల్ లో ఉన్నాయో లేదో చెక్ చేసి తీసుకోవడం
         optional_cols = [
             "Store Entry No",
             "Invoice Date",
@@ -130,7 +142,6 @@ elif page == "6. Invoice Wise Total Value":
             c for c in optional_cols if c in df.columns
         ]
 
-        # గ్రూప్ చేసే కాలమ్స్ జాబితా
         group_cols = [sup_col, inv_col] + available_extra_cols
 
         summary_df = (
@@ -140,8 +151,23 @@ elif page == "6. Invoice Wise Total Value":
             .rename(columns={val_col: "Total Invoice Value"})
         )
 
+        st.markdown("---")
+        # ప్రింట్ / PDF ఆప్షన్ కోసం బటన్
+        col_btn1, col_btn2 = st.columns([6, 1])
+        with col_btn2:
+          if st.button("🖨️ Print / PDF", key="print_btn_page6"):
+            st.markdown(
+                """
+                    <script>
+                    window.print();
+                    </script>
+                    """,
+                unsafe_allow_html=True,
+            )
+
         st.markdown(
-"
+            "### ప్రతి సప్లయర్ మరియు ఇన్వాయిస్ నంబర్ వారీగా మొత్తం విలువ మరియు"
+            " ఇతర వివరాలు:"
         )
         st.data_editor(
             summary_df, hide_index=True, use_container_width=True, disabled=True
