@@ -653,14 +653,15 @@ elif page in [
       "This module is configured to standard corporate template parameters."
   )
   st.info("Module ready for operational deployment.")
-# ================= PAGE 9: AKG SHUTTERINGS DEDICATED LEDGER =================
+    
+      # ================= PAGE 9: AKG SHUTTERINGS DEDICATED LEDGER =================
 elif page == "9. AKG Shutterings Ledger":
   st.title(
-      "📑 AKG SHUTTERINGS PRIVATE LIMITED - Rental & Tax Ledger (18% Default)"
+      "📑 AKG SHUTTERINGS PRIVATE LIMITED - Rental, Return Date & Tax Ledger"
   )
   st.markdown(
-      "Exclusive statement breakdown including Store Entry, Receiving/Return"
-      " Dates, Monthly Stock Rent, and 18% Tax Calculation."
+      "Exclusive statement breakdown including Store Entry, Return Dates,"
+      " Monthly Stock Rent, and 18% Tax Calculation."
   )
 
   if not st.session_state.current_df.empty:
@@ -705,29 +706,30 @@ elif page == "9. AKG Shutterings Ledger":
               sup_invoices["Actualy Recived Date"], errors="coerce"
           )
 
-          if "Return Date" in sup_invoices.columns:
-            sup_invoices["Return Date DT"] = pd.to_datetime(
-                sup_invoices["Return Date"], errors="coerce"
-            )
-          else:
-            sup_invoices["Return Date DT"] = pd.to_datetime("today")
+          # మెయిన్ డేటాఫ్రేమ్ లో Return Date కాలమ్ ఉందో లేదో చెక్ చేయడం
+          if "Return Date" not in sup_invoices.columns:
+            sup_invoices["Return Date"] = None
 
-          # టోటల్ డేస్ కౌంట్
+          sup_invoices["Return Date DT"] = pd.to_datetime(
+              sup_invoices["Return Date"], errors="coerce"
+          )
+          # ఒకవేళ రిటర్న్ డేట్ లేకపోతే ప్రస్తుత తేదీని (Current Date) రన్నింగ్ మెటీరియల్స్ కోసం కౌంట్ చేయడం
+          effective_return_dt = sup_invoices["Return Date DT"].fillna(
+              pd.to_datetime("today")
+          )
+
           sup_invoices["Total Days"] = (
-              sup_invoices["Return Date DT"]
-              - sup_invoices["Actualy Recived Date DT"]
+              effective_return_dt - sup_invoices["Actualy Recived Date DT"]
           ).dt.days
           sup_invoices["Total Days"] = sup_invoices["Total Days"].fillna(1)
           sup_invoices["Total Days"] = sup_invoices["Total Days"].apply(
               lambda x: max(int(x), 1)
           )
 
-          # మంత్లీ కౌంటింగ్ (నెలవారీ రెంట్ కోసం)
           sup_invoices["Calculated Months"] = (
               sup_invoices["Total Days"] / 30.0
           ).round(2)
 
-        # రేట్ మరియు క్వాంటిటీ నుండి బేసిక్ మంత్లీ రెంట్ వాల్యూ లెక్కించడం
         possible_qty_cols = ["Qty", "Quantity", "Nos"]
         possible_rate_cols = ["Rate", "Unit Rate", "Rent Rate"]
 
@@ -768,7 +770,6 @@ elif page == "9. AKG Shutterings Ledger":
             + sup_invoices["SGST (9%)"]
         ).round(2)
 
-        # సీరియల్ నంబర్
         if "S.No" in sup_invoices.columns:
           sup_invoices["S.No"] = range(1, len(sup_invoices) + 1)
         else:
@@ -776,7 +777,6 @@ elif page == "9. AKG Shutterings Ledger":
 
         total_inv_amt = sup_invoices["Total Rent with 18% Tax"].sum()
 
-        # పేమెంట్స్ టోటల్
         if not st.session_state.payments_df.empty:
           sup_payments = (
               st.session_state.payments_df[
@@ -804,10 +804,19 @@ elif page == "9. AKG Shutterings Ledger":
 
         st.markdown("---")
 
-        # Quick Payment Entry Pop-up with Default Vendor
-        if st.button("💳 Add Payment for AKG Shutterings", key="btn_pay_akg"):
-          st.session_state["show_akg_pay_popup"] = True
+        # Buttons for Popups (Payment & Material/Return Updates)
+        col_btn1, col_btn2 = st.columns(2)
+        with col_btn1:
+          if st.button("💳 Add Payment for AKG Shutterings", key="btn_pay_akg"):
+            st.session_state["show_akg_pay_popup"] = True
+        with col_btn2:
+          if st.button(
+              "✏️ Update Return Date / Rates (Running Material)",
+              key="btn_rent_popup",
+          ):
+            st.session_state["show_akg_rent_popup"] = True
 
+        # 1. Payment Popup Form
         if st.session_state.get("show_akg_pay_popup", False):
           with st.form("akg_payment_form"):
             st.subheader("Add Payment Entry — AKG Shutterings")
@@ -843,9 +852,90 @@ elif page == "9. AKG Shutterings Ledger":
               st.success("Payment saved successfully!")
               st.rerun()
 
+        # 2. Return Date, Quantity & Rate Popup Form (రన్నింగ్ లేదా రిటర్న్ మెటీరియల్స్ కోసం)
+        if st.session_state.get("show_akg_rent_popup", False):
+          with st.form("akg_rent_form"):
+            st.subheader(
+                "Update Material Return Date, Qty & Rate — AKG Shutterings"
+            )
+            st.info(
+                "ఇక్కడ మీరు స్టోర్ ఎంట్రీ నెంబర్‌ను సెలెక్ట్ చేసి మెటీరియల్"
+                " రిటర్న్ తేదీని, రేటును లేదా క్వాంటిటీని అప్‌డేట్ చేయవచ్చు."
+            )
+
+            entry_list = list(sup_invoices["Store Entry No"].dropna().unique())
+            selected_entry = st.selectbox(
+                "Select Store Entry No:", entry_list
+            )
+
+            curr_row = sup_invoices[
+                sup_invoices["Store Entry No"] == selected_entry
+            ].iloc[0]
+            curr_qty = float(curr_row.get(qty_col, 1.0))
+            curr_rate = float(curr_row.get(rate_col, 0.0))
+
+            # ప్రస్తుత రిటర్న్ డేట్ ఉంటే దాన్ని చూపించడం, లేకపోతే టుడే డేట్
+            existing_ret_date = curr_row.get("Return Date")
+            default_date = (
+                pd.to_datetime(existing_ret_date).date()
+                if pd.notnull(existing_ret_date)
+                else datetime.date.today()
+            )
+
+            new_qty = st.number_input(
+                "Quantity", value=curr_qty, min_value=0.0, format="%.2f"
+            )
+            new_rate = st.number_input(
+                "Monthly Rent Rate (₹)",
+                value=curr_rate,
+                min_value=0.0,
+                format="%.2f",
+            )
+            is_returned = st.checkbox(
+                "Has Material Been Returned?",
+                value=True if pd.notnull(existing_ret_date) else False,
+            )
+            new_return_date = st.date_input(
+                "Material Return Date", value=default_date
+            )
+
+            submitted_rent = st.form_submit_button(
+                "Update Record & Calculate Rent"
+            )
+            if submitted_rent:
+              final_ret_val = (
+                  str(new_return_date) if is_returned else None
+              )
+
+              # మెయిన్ డేటాఫ్రేమ్‌లో వాల్యూస్ అప్‌డేట్ చేయడం
+              if "Return Date" not in df.columns:
+                df["Return Date"] = None
+
+              df.loc[
+                  (df[sup_col] == target_supplier)
+                  & (df["Store Entry No"] == selected_entry),
+                  qty_col,
+              ] = new_qty
+              df.loc[
+                  (df[sup_col] == target_supplier)
+                  & (df["Store Entry No"] == selected_entry),
+                  rate_col,
+              ] = new_rate
+              df.loc[
+                  (df[sup_col] == target_supplier)
+                  & (df["Store Entry No"] == selected_entry),
+                  "Return Date",
+              ] = final_ret_val
+
+              st.session_state.current_df = df
+              st.session_state["show_akg_rent_popup"] = False
+              st.success("Return date and parameters updated successfully!")
+              st.rerun()
+
         st.markdown("---")
         st.subheader(
-            "📂 Monthly Stock Rent & 18% Tax Breakdown — AKG Shutterings"
+            "📂 Monthly Stock Rent, Return Date & 18% Tax Breakdown — AKG"
+            " Shutterings"
         )
 
         desired_cols = [
