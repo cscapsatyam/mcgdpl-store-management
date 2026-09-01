@@ -7,7 +7,7 @@ st.set_page_config(
     page_title="Enterprise Store Management System", layout="wide"
 )
 
-# Custom Styling for Professional Look & Modern Navigation
+# Custom Styling for Professional ERP Look
 st.markdown(
     """
     <style>
@@ -26,8 +26,13 @@ st.markdown(
         background-color: #0b5ed7;
         color: white;
     }
-    .css-1d391kg {
+    .erp-header {
         background-color: #ffffff;
+        padding: 15px 20px;
+        border-bottom: 2px solid #0d6efd;
+        margin-bottom: 20px;
+        border-radius: 6px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
     }
     </style>
     """,
@@ -74,15 +79,20 @@ if st.session_state.current_df.empty:
   except Exception as e:
     pass
 
-# --- Professional Top / Sidebar Header ---
-st.sidebar.markdown(
-    "## 🏢 Enterprise Store"
-)  # చిన్న టైటిల్ మాత్రమే సైడ్‌బార్‌లో ఉంచుదాం
-st.sidebar.markdown("---")
+# --- ERP TOP HORIZONTAL NAVIGATION TABS ---
+st.markdown(
+    """
+    <div class="erp-header">
+        <h2 style='margin:0; color: #0d6efd;'>🏢 Enterprise Store Management ERP</h2>
+        <p style='margin:0; color: #6c757d; font-size: 14px;'>Centralized Material & Vendor Accounts Hub</p>
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
 
-# మోడర్న్ నావిగేషన్ మెను (ప్రొఫెషనల్ లుక్ కోసం రేడియో బటన్‌ని నీట్‌గా అరేంజ్ చేశాం)
-page = st.sidebar.radio(
-    "📌 Main Modules:",
+# Horizontal Tabs for Modules
+page = st.radio(
+    "Navigation Menu",
     [
         "1. Dashboard / Home",
         "2. Material Register View",
@@ -93,11 +103,10 @@ page = st.sidebar.radio(
         "7. Vendor Payments Entry",
         "8. Vendor Statement & Ledger",
     ],
-    index=0,
+    horizontal=True,
 )
 
-st.sidebar.markdown("---")
-st.sidebar.caption("System Version: 2.5.0 | Secure Cloud DB")
+st.markdown("---")
 
 # ================= PAGE 1: HOME =================
 if page == "1. Dashboard / Home":
@@ -393,10 +402,6 @@ elif page == "7. Vendor Payments Entry":
       st.error("Required supplier or valuation columns missing from dataset.")
   else:
     st.info("Please load data records first.")
-
-
- 
-
 
 # ================= PAGE 8: VENDOR STATEMENT & LEDGER =================
 elif page == "8. Vendor Statement & Ledger":
