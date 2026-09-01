@@ -1,3 +1,4 @@
+import os
 import numpy as np
 import pandas as pd
 import streamlit as st
@@ -32,16 +33,34 @@ st.markdown(
 # Initialize Session State variables
 if "current_df" not in st.session_state:
   st.session_state.current_df = pd.DataFrame()
+
+# Payments data file path for permanent storage
+PAYMENTS_FILE = "payments_data.csv"
+
 if "payments_df" not in st.session_state:
-  st.session_state.payments_df = pd.DataFrame(
-      columns=[
-          "Supplier Name",
-          "Payment Date",
-          "Reference No",
-          "Paid Amount",
-          "Remarks",
-      ]
-  )
+  if os.path.exists(PAYMENTS_FILE):
+    try:
+      st.session_state.payments_df = pd.read_csv(PAYMENTS_FILE)
+    except Exception as e:
+      st.session_state.payments_df = pd.DataFrame(
+          columns=[
+              "Supplier Name",
+              "Payment Date",
+              "Reference No",
+              "Paid Amount",
+              "Remarks",
+          ]
+      )
+  else:
+    st.session_state.payments_df = pd.DataFrame(
+        columns=[
+            "Supplier Name",
+            "Payment Date",
+            "Reference No",
+            "Paid Amount",
+            "Remarks",
+        ]
+    )
 
 # Automatically load Book1.xlsx from GitHub
 if st.session_state.current_df.empty:
@@ -90,7 +109,6 @@ if page == "1. Home / Dashboard":
       if selected_receipt != "All":
         df = df[df[receipt_col] == selected_receipt]
 
-    # ഫిల్టర్ చేసిన తర్వాత S.No సరిగ్గా 1 నుండి ప్రారంభమయ్యేలా రీసెట్ చేయడం
     df = df.reset_index(drop=True)
     if "S.No" in df.columns:
       df["S.No"] = range(1, len(df) + 1)
@@ -189,7 +207,6 @@ elif page == "6. Invoice Wise Total Value":
             .rename(columns={val_col: "Total Invoice Value"})
         )
 
-        # సమ్మరీ టేబుల్‌లో కూడా S.No ఆటోమేటిక్‌గా 1 నుండి వచ్చేలా చేయడం
         summary_df = summary_df.reset_index(drop=True)
         summary_df.insert(0, "S.No", range(1, len(summary_df) + 1))
 
@@ -277,9 +294,11 @@ elif page == "7. Vendor Payments Entry":
           st.session_state.payments_df = pd.concat(
               [st.session_state.payments_df, new_payment], ignore_index=True
           )
+          # పర్మనెంట్‌గా CSV ఫైల్‌లో సేవ్ చేయడం
+          st.session_state.payments_df.to_csv(PAYMENTS_FILE, index=False)
           st.success(
               f"Successfully recorded payment of ₹ {p_amount:,.2f} for"
-              f" {p_supplier}."
+              f" {p_supplier} and saved permanently!"
           )
 
       st.markdown("---")
@@ -309,8 +328,7 @@ elif page == "7. Vendor Payments Entry":
       outstanding_df["Outstanding Amount"] = (
           outstanding_df["Total Invoice Amount"] - outstanding_df["Paid Amount"]
       )
-      
-      # అవుట్‌స్టాండింగ్ సమ్మరీ టేబుల్‌లో S.No యాడ్ చేయడం
+
       outstanding_df = outstanding_df.reset_index(drop=True)
       outstanding_df.insert(0, "S.No", range(1, len(outstanding_df) + 1))
 
@@ -381,7 +399,9 @@ elif page == "8. Vendor Outstanding Detailed Report":
 
       st.markdown("---")
 
-      sup_invoices = df[df[sup_col] == selected_supplier_det].copy().reset_index(drop=True)
+      sup_invoices = (
+          df[df[sup_col] == selected_supplier_det].copy().reset_index(drop=True)
+      )
       if "S.No" in sup_invoices.columns:
         sup_invoices["S.No"] = range(1, len(sup_invoices) + 1)
       else:
@@ -390,9 +410,14 @@ elif page == "8. Vendor Outstanding Detailed Report":
       total_inv_amt = sup_invoices[val_col].sum()
 
       if not st.session_state.payments_df.empty:
-        sup_payments = st.session_state.payments_df[
-            st.session_state.payments_df["Supplier Name"] == selected_supplier_det
-        ].copy().reset_index(drop=True)
+        sup_payments = (
+            st.session_state.payments_df[
+                st.session_state.payments_df["Supplier Name"]
+                == selected_supplier_det
+            ]
+            .copy()
+            .reset_index(drop=True)
+        )
         sup_payments.insert(0, "S.No", range(1, len(sup_payments) + 1))
         total_paid_amt = sup_payments["Paid Amount"].sum()
       else:
