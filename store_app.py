@@ -87,7 +87,7 @@ elif page == "6. Invoice Wise Total Value":
     sup_col = "Supplier / Sendor Name"
     inv_col = "Invoice No"
 
-    # మీ ఎక్సెల్ ఫైల్ ప్రకారం 'Inovice value' ని ఇక్కడ చేర్చడం జరిగింది
+    # వాల్యూ కాలమ్ వెతకడం
     possible_val_cols = [
         "Inovice value",
         "Invoice Value",
@@ -119,15 +119,30 @@ elif page == "6. Invoice Wise Total Value":
             errors="coerce",
         ).fillna(0)
 
+        # అదనపు కాలమ్స్ (Store Entry No, Invoice Date, GRN No, GRN Date) ఎక్సెల్ లో ఉన్నాయో లేదో చెక్ చేసి తీసుకోవడం
+        optional_cols = [
+            "Store Entry No",
+            "Invoice Date",
+            "GRN No",
+            "GRN Date",
+        ]
+        available_extra_cols = [
+            c for c in optional_cols if c in df.columns
+        ]
+
+        # గ్రూప్ చేసే కాలమ్స్ జాబితా
+        group_cols = [sup_col, inv_col] + available_extra_cols
+
         summary_df = (
-            df.groupby([sup_col, inv_col])[val_col]
+            df.groupby(group_cols)[val_col]
             .sum()
             .reset_index()
             .rename(columns={val_col: "Total Invoice Value"})
         )
 
         st.markdown(
-            "### ప్రతి సప్లయర్ మరియు ఇన్వాయిస్ నంబర్ వారీగా మొత్తం విలువ:"
+            "### ప్రతి సప్లయర్ మరియు ఇన్వాయిస్ నంబర్ వారీగా మొత్తం విలువ మరియు"
+            " ఇతర వివరాలు:"
         )
         st.data_editor(
             summary_df, hide_index=True, use_container_width=True, disabled=True
