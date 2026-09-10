@@ -217,7 +217,7 @@ def run():
           )
 
           with tab_p1:
-            with st.form("akg_bulk_rate_form_v9"):
+            with st.form("akg_bulk_rate_form_v10"):
               st.subheader("Set Rent Rate & Calculation Basis")
               if mat_desc_col:
                 unique_materials = list(
@@ -227,7 +227,7 @@ def run():
                   selected_mat_1 = st.selectbox(
                       "Select Material Name / Description:",
                       unique_materials,
-                      key="bulk_mat_select_1_v9",
+                      key="bulk_mat_select_1_v10",
                   )
 
                   default_bulk_rate = float(
@@ -287,7 +287,7 @@ def run():
                 st.warning("Material description column not available.")
 
           with tab_p2:
-            with st.form("akg_return_qty_form_v9"):
+            with st.form("akg_return_qty_form_v10"):
               st.subheader("Update Material Return & Quantity")
               if mat_desc_col:
                 unique_materials = list(
@@ -297,7 +297,7 @@ def run():
                   selected_mat_2 = st.selectbox(
                       "Select Material Name / Description:",
                       unique_materials,
-                      key="bulk_mat_select_2_v9",
+                      key="bulk_mat_select_2_v10",
                   )
 
                   mat_rows_check = sup_invoices[
@@ -394,10 +394,10 @@ def run():
                 editable_df,
                 hide_index=True,
                 use_container_width=True,
-                key="specific_material_data_editor_v9",
+                key="specific_material_data_editor_v10",
             )
 
-            if st.button("Save Modifications", key="save_mod_btn_v9"):
+            if st.button("Save Modifications", key="save_mod_btn_v10"):
               for idx, row in edited_result_df.iterrows():
                 orig_idx = row["Original_Index"]
                 df.loc[orig_idx, qty_col] = row[qty_col]
@@ -405,11 +405,11 @@ def run():
                 df.loc[orig_idx, "Return Date"] = row["Return Date"]
 
               st.session_state.current_df = df.copy()
-              st.success("మార్పులు విజయవంతంగా సేవ్ చేయబడ్డాయి!")
+              st.success("Modifications saved successfully!")
               st.rerun()
 
           with tab_p4:
-            with st.form("akg_payment_form_v9"):
+            with st.form("akg_payment_form_v10"):
               st.subheader("Add Payment Entry")
               st.text_input(
                   "Vendor Name", value=target_supplier, disabled=True
@@ -488,7 +488,7 @@ def run():
                 "📂 Select Month:",
                 months_list,
                 index=default_m_idx,
-                key="akg_dropdown_month_v9",
+                key="akg_dropdown_month_v10",
             )
           with col_y_sel:
             current_year = datetime.datetime.now().year
@@ -501,7 +501,7 @@ def run():
                 "📅 Select Year:",
                 years_list,
                 index=default_y_idx,
-                key="akg_dropdown_year_v9",
+                key="akg_dropdown_year_v10",
             )
 
           selected_dropdown_month = f"{selected_month_name} {selected_year_val}"
@@ -564,7 +564,7 @@ def run():
                 hide_index=True,
                 use_container_width=True,
                 disabled=True,
-                key="mat_report_active_table_v9",
+                key="mat_report_active_table_v10",
             )
 
             # Total Value Calculation & Display for this Month
@@ -572,7 +572,7 @@ def run():
             total_month_tax_rent = material_report["Total_Tax_18"].sum()
 
             st.markdown(
-                f"**📊 {selected_dropdown_month} మొత్తం అద్దె వివరాలు:**"
+                f"**📊 Total Rent Breakdown for {selected_dropdown_month}:**"
             )
             col_tot1, col_tot2 = st.columns(2)
             col_tot1.metric(
@@ -586,11 +586,10 @@ def run():
 
           else:
             st.info(
-                f"ఈ నెల ({selected_dropdown_month}) లో ఎలాంటి యాక్టివ్ మెటీరియల్స్"
-                " లేవు."
+                f"No active materials found for {selected_dropdown_month}."
             )
         else:
-          st.info("సరిపడా డేటా అందుబాటులో లేదు.")
+          st.info("Insufficient data available.")
 
         st.markdown("---")
         st.subheader("📦 AKG Shutterings Material Receiving Status")
@@ -622,7 +621,7 @@ def run():
             hide_index=True,
             use_container_width=True,
             disabled=True,
-            key="akg_inv_table_v9",
+            key="akg_inv_table_v10",
         )
 
         st.markdown("---")
@@ -665,7 +664,7 @@ def run():
               hide_index=True,
               use_container_width=True,
               disabled=True,
-              key="akg_stock_ledger_table_v9",
+              key="akg_stock_ledger_table_v10",
           )
         else:
           st.info("Material description column not found for stock ledger.")
@@ -678,7 +677,7 @@ def run():
               hide_index=True,
               use_container_width=True,
               disabled=True,
-              key="akg_pay_table_v9",
+              key="akg_pay_table_v10",
           )
         else:
           st.info("No payment transactions recorded for this vendor yet.")
