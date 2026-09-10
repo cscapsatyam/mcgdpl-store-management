@@ -362,7 +362,7 @@ def run():
 
         st.markdown("---")
         st.subheader(
-            "📂 Monthly Stock Rent, Return Date & 18% Tax Breakdown — AKG"
+            "📂  ("📦 AKG Shutterings Material Receiving Status")
             " Shutterings"
         )
 
