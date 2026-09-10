@@ -161,7 +161,6 @@ def run():
             + sup_invoices["SGST (9%)"]
         ).round(2)
 
-        # S.No సరిగ్గా అసైన్ చేయడానికి (ఎర్రర్ రాకుండా)
         if "S.No" in sup_invoices.columns:
           sup_invoices["S.No"] = range(1, len(sup_invoices) + 1)
         else:
@@ -218,7 +217,7 @@ def run():
           )
 
           with tab_p1:
-            with st.form("akg_bulk_rate_form_v4"):
+            with st.form("akg_bulk_rate_form_v5"):
               st.subheader("Set Rent Rate & Calculation Basis")
               if mat_desc_col:
                 unique_materials = list(
@@ -228,7 +227,7 @@ def run():
                   selected_mat_1 = st.selectbox(
                       "Select Material Name / Description:",
                       unique_materials,
-                      key="bulk_mat_select_1_v4",
+                      key="bulk_mat_select_1_v5",
                   )
 
                   default_bulk_rate = float(
@@ -288,7 +287,7 @@ def run():
                 st.warning("Material description column not available.")
 
           with tab_p2:
-            with st.form("akg_return_qty_form_v4"):
+            with st.form("akg_return_qty_form_v5"):
               st.subheader("Update Material Return & Quantity")
               if mat_desc_col:
                 unique_materials = list(
@@ -298,7 +297,7 @@ def run():
                   selected_mat_2 = st.selectbox(
                       "Select Material Name / Description:",
                       unique_materials,
-                      key="bulk_mat_select_2_v4",
+                      key="bulk_mat_select_2_v5",
                   )
 
                   mat_rows_check = sup_invoices[
@@ -395,10 +394,10 @@ def run():
                 editable_df,
                 hide_index=True,
                 use_container_width=True,
-                key="specific_material_data_editor_v4",
+                key="specific_material_data_editor_v5",
             )
 
-            if st.button("Save Modifications", key="save_mod_btn_v4"):
+            if st.button("Save Modifications", key="save_mod_btn_v5"):
               for idx, row in edited_result_df.iterrows():
                 orig_idx = row["Original_Index"]
                 df.loc[orig_idx, qty_col] = row[qty_col]
@@ -410,7 +409,7 @@ def run():
               st.rerun()
 
           with tab_p4:
-            with st.form("akg_payment_form_v4"):
+            with st.form("akg_payment_form_v5"):
               st.subheader("Add Payment Entry")
               st.text_input(
                   "Vendor Name", value=target_supplier, disabled=True
@@ -507,7 +506,7 @@ def run():
             selected_dropdown_month = st.selectbox(
                 "📂 Select Month (Active Materials Breakdown):",
                 all_months_set,
-                key="akg_material_dropdown_active_months_v4",
+                key="akg_material_dropdown_active_months_v5",
             )
 
           st.markdown(
@@ -538,18 +537,19 @@ def run():
 
           if active_rows:
             month_sub_df = pd.DataFrame(active_rows)
+            # బేసిక్ రెంట్ (Base Rent Value) కూడా టేబుల్‌లో కనిపించేలా అప్‌డేట్ చేసాం
             material_report = (
                 month_sub_df.groupby(mat_desc_col)
                 .agg(
                     Total_Qty=(qty_col, "sum"),
-                    Total_Base_Rent=("Base Rent Value", "sum"),
+                    Base_Rent_Value=("Base Rent Value", "sum"),
                     Total_Tax_18=("Total Rent with 18% Tax", "sum"),
                 )
                 .reset_index()
             )
 
-            material_report["Total_Base_Rent"] = material_report[
-                "Total_Base_Rent"
+            material_report["Base_Rent_Value"] = material_report[
+                "Base_Rent_Value"
             ].round(2)
             material_report["Total_Tax_18"] = material_report[
                 "Total_Tax_18"
@@ -567,7 +567,7 @@ def run():
                 hide_index=True,
                 use_container_width=True,
                 disabled=True,
-                key="mat_report_active_table_v4",
+                key="mat_report_active_table_v5",
             )
           else:
             st.info(
@@ -607,7 +607,7 @@ def run():
             hide_index=True,
             use_container_width=True,
             disabled=True,
-            key="akg_inv_table_v4",
+            key="akg_inv_table_v5",
         )
 
         st.markdown("---")
@@ -650,7 +650,7 @@ def run():
               hide_index=True,
               use_container_width=True,
               disabled=True,
-              key="akg_stock_ledger_table_v4",
+              key="akg_stock_ledger_table_v5",
           )
         else:
           st.info("Material description column not found for stock ledger.")
@@ -663,7 +663,7 @@ def run():
               hide_index=True,
               use_container_width=True,
               disabled=True,
-              key="akg_pay_table_v4",
+              key="akg_pay_table_v5",
           )
         else:
           st.info("No payment transactions recorded for this vendor yet.")
