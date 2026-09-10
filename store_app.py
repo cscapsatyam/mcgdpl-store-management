@@ -653,8 +653,8 @@ elif page in [
       "This module is configured to standard corporate template parameters."
   )
   st.info("Module ready for operational deployment.")
-    
-  # ================= PAGE 9: AKG SHUTTERINGS DEDICATED LEDGER =================
+
+# ================= PAGE 9: AKG SHUTTERINGS DEDICATED LEDGER =================
 if page == "9. AKG Shutterings Ledger":
   st.title(
       "📑 AKG SHUTTERINGS PRIVATE LIMITED - Rental, Stock Ledger & Tax"
@@ -777,10 +777,13 @@ if page == "9. AKG Shutterings Ledger":
         else:
           filtered_sup_invoices.insert(0, "S.No", range(1, len(filtered_sup_invoices) + 1))
 
-        # మొత్తం ఇన్‌వాయిస్ అమౌంట్ అన్ని నెలలకి కలిపి లెక్కింపు
-        sup_invoices[qty_col] = pd.to_numeric(
-            sup_invoices[qty_col].astype(str).str.replace(r"[^\d.]", "", regex=True), errors="coerce"
-        ).fillna(0)
+        # మొత్తం ఇన్‌వాయిస్ అమౌంట్ అన్ని నెలలకి కలిపి లెక్కింపు (సవరించిన కోడ్)
+        if qty_col in sup_invoices.columns:
+          sup_invoices[qty_col] = pd.to_numeric(
+              sup_invoices[qty_col].astype(str).str.replace(r"[^\d.]", "", regex=True), errors="coerce"
+          ).fillna(0)
+        else:
+          sup_invoices[qty_col] = 0.0
         
         # అన్ని నెలల టోటల్ రెంట్ వాల్యూ కోసం పూర్తి డేటాను లెక్కించడం
         full_calc_df = sup_invoices.copy()
@@ -1019,7 +1022,6 @@ if page == "9. AKG Shutterings Ledger":
         )
 
         if mat_desc_col:
-          # మొత్తం sup_invoices (అన్ని నెలలు కలిపి) డేటా ఆధారంగా స్టాక్ లెడ్జర్‌ను లెక్కించడం
           sup_invoices["Is Returned Flag"] = sup_invoices["Return Date"].notnull()
 
           stock_summary = (
@@ -1070,3 +1072,5 @@ if page == "9. AKG Shutterings Ledger":
       st.error("Supplier column not detected in dataset.")
   else:
     st.info("Please load data records first from the main upload page.")
+
+
