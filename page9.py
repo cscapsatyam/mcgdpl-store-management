@@ -44,18 +44,44 @@ def run():
           sup_invoices["Month_Year"] = pd.to_datetime(
               sup_invoices[date_col], errors="coerce"
           ).dt.strftime("%B %Y")
-          months_list = ["All Months"] + [
-              m
-              for m in sup_invoices["Month_Year"].dropna().unique()
-              if pd.notnull(m)
+
+          # 12 నెలల పూర్తి డ్రాప్‌డౌన్ లిస్ట్ తయారు చేయడం
+          all_months = [
+              "January",
+              "February",
+              "March",
+              "April",
+              "May",
+              "June",
+              "July",
+              "August",
+              "September",
+              "October",
+              "November",
+              "December",
           ]
+          years_present = (
+              pd.to_datetime(sup_invoices[date_col], errors="coerce")
+              .dt.year.dropna()
+              .unique()
+          )
+
+          months_list = ["All Months"]
+          if len(years_present) > 0:
+            for yr in sorted(years_present):
+              for m in all_months:
+                months_list.append(f"{m} {int(yr)}")
+          else:
+            for m in sup_invoices["Month_Year"].dropna().unique():
+              if pd.notnull(m) and m not in months_list:
+                months_list.append(m)
 
           col_f1, _ = st.columns([2, 4])
           with col_f1:
             selected_month = st.selectbox(
                 "📅 Filter by Month & Year (Rent Table Only):",
                 months_list,
-                key="akg_month_filter",
+                key="akg_month_filter_new",
             )
 
           filtered_sup_invoices = sup_invoices.copy()
@@ -309,7 +335,7 @@ def run():
           )
 
           with tab_p1:
-            with st.form("akg_bulk_rate_form"):
+            with st.form("akg_bulk_rate_form_new"):
               st.subheader("Set Rent Rate & Calculation Basis")
               if mat_desc_col:
                 unique_materials = list(
@@ -319,7 +345,7 @@ def run():
                   selected_mat_1 = st.selectbox(
                       "Select Material Name / Description:",
                       unique_materials,
-                      key="bulk_mat_select_1",
+                      key="bulk_mat_select_1_new",
                   )
 
                   default_bulk_rate = float(
@@ -379,7 +405,7 @@ def run():
                 st.warning("Material description column not available.")
 
           with tab_p2:
-            with st.form("akg_return_qty_form"):
+            with st.form("akg_return_qty_form_new"):
               st.subheader("Update Material Return & Quantity")
               if mat_desc_col:
                 unique_materials = list(
@@ -389,7 +415,7 @@ def run():
                   selected_mat_2 = st.selectbox(
                       "Select Material Name / Description:",
                       unique_materials,
-                      key="bulk_mat_select_2",
+                      key="bulk_mat_select_2_new",
                   )
 
                   mat_rows_check = sup_invoices[
@@ -486,10 +512,10 @@ def run():
                 editable_df,
                 hide_index=True,
                 use_container_width=True,
-                key="specific_material_data_editor",
+                key="specific_material_data_editor_new",
             )
 
-            if st.button("Save Modifications", key="save_mod_btn"):
+            if st.button("Save Modifications", key="save_mod_btn_new"):
               for idx, row in edited_result_df.iterrows():
                 orig_idx = row["Original_Index"]
                 df.loc[orig_idx, qty_col] = row[qty_col]
@@ -501,7 +527,7 @@ def run():
               st.rerun()
 
           with tab_p4:
-            with st.form("akg_payment_form"):
+            with st.form("akg_payment_form_new"):
               st.subheader("Add Payment Entry")
               st.text_input(
                   "Vendor Name", value=target_supplier, disabled=True
@@ -555,47 +581,91 @@ def run():
               filtered_sup_invoices["Actualy Recived Date"], errors="coerce"
           ).dt.strftime("%B %Y")
 
-          available_months = [
-              m
-              for m in filtered_sup_invoices["Billing Month"].dropna().unique()
-              if pd.notnull(m)
+          full_possible_months = [
+              "January",
+              "February",
+              "March",
+              "April",
+              "May",
+              "June",
+              "July",
+              "August",
+              "September",
+              "October",
+              "November",
+              "December",
           ]
 
-          if available_months:
-            month_tabs = st.tabs([f"📅 {m}" for m in available_months])
+          years_present_mat = (
+              pd.to_datetime(
+                  filtered_sup_invoices["Actualy Recived Date"], errors="coerce"
+              )
+              .dt.year.dropna()
+              .unique()
+          )
 
-            for idx, m_name in enumerate(available_months):
-              with month_tabs[idx]:
-                st.markdown(f"### Material-wise Rent for **{m_name}**")
-                month_sub_df = filtered_sup_invoices[
-                    filtered_sup_invoices["Billing Month"] == m_name
-                ]
+          if len(years_present_mat) > 0:
+            full_months_list = []
+            for yr in sorted(years_present_mat):
+              for m in full_possible_months:
+                full_months_list.append(f"{m} {int(yr)}")
+          else:
+            full_months_list = [
+                m
+                for m in filtered_sup_invoices["Billing Month"].dropna().unique()
+                if pd.notnull(m)
+            ]
 
-                material_report = (
-                    month_sub_df.groupby(mat_desc_col)
-                    .agg(
-                        Total_Qty=(qty_col, "sum"),
-                        Total_Base_Rent=("Base Rent Value", "sum"),
-                        Total_Tax_18=("Total Rent with 18% Tax", "sum"),
-                    )
-                    .reset_index()
-                )
+          if full_months_list:
+            col_d1, _ = st.columns([2, 4])
+            with col_d1:
+              selected_dropdown_month = st.selectbox(
+                  "📂 Select Month (Material Breakdown):",
+                  full_months_list,
+                  key="akg_material_dropdown_month_new",
+              )
 
-                material_report["Total_Base_Rent"] = material_report[
-                    "Total_Base_Rent"
-                ].round(2)
-                material_report["Total_Tax_18"] = material_report[
-                    "Total_Tax_18"
-                ].round(2)
-                material_report.insert(0, "S.No", range(1, len(material_report) + 1))
+            st.markdown(
+                f"### Material-wise Rent for **{selected_dropdown_month}**"
+            )
 
-                st.data_editor(
-                    material_report,
-                    hide_index=True,
-                    use_container_width=True,
-                    disabled=True,
-                    key=f"mat_report_tab_{idx}",
-                )
+            month_sub_df = filtered_sup_invoices[
+                filtered_sup_invoices["Billing Month"] == selected_dropdown_month
+            ]
+
+            if not month_sub_df.empty:
+              material_report = (
+                  month_sub_df.groupby(mat_desc_col)
+                  .agg(
+                      Total_Qty=(qty_col, "sum"),
+                      Total_Base_Rent=("Base Rent Value", "sum"),
+                      Total_Tax_18=("Total Rent with 18% Tax", "sum"),
+                  )
+                  .reset_index()
+              )
+
+              material_report["Total_Base_Rent"] = material_report[
+                  "Total_Base_Rent"
+              ].round(2)
+              material_report["Total_Tax_18"] = material_report[
+                  "Total_Tax_18"
+              ].round(2)
+              material_report.insert(
+                  0, "S.No", range(1, len(material_report) + 1)
+              )
+
+              st.data_editor(
+                  material_report,
+                  hide_index=True,
+                  use_container_width=True,
+                  disabled=True,
+                  key="mat_report_dropdown_table_new",
+              )
+            else:
+              st.info(
+                  f"ఈ నెల ({selected_dropdown_month}) లో ఎలాంటి మెటీరియల్ రికార్డ్స్"
+                  " లేవు."
+              )
           else:
             st.info("సరిపడా మంత్లీ డేటా అందుబాటులో లేదు.")
         else:
@@ -639,7 +709,7 @@ def run():
             hide_index=True,
             use_container_width=True,
             disabled=True,
-            key="akg_inv_table",
+            key="akg_inv_table_new",
         )
 
         st.markdown("---")
@@ -678,7 +748,7 @@ def run():
               hide_index=True,
               use_container_width=True,
               disabled=True,
-              key="akg_stock_ledger_table",
+              key="akg_stock_ledger_table_new",
           )
         else:
           st.info("Material description column not found for stock ledger.")
@@ -690,8 +760,8 @@ def run():
               sup_payments,
               hide_index=True,
               use_container_width=True,
-            disabled=True,
-              key="akg_pay_table",
+              disabled=True,
+              key="akg_pay_table_new",
           )
         else:
           st.info("No payment transactions recorded for this vendor yet.")
