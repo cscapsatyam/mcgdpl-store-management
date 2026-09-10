@@ -25,7 +25,7 @@ def run():
       if "Return Date" not in df.columns:
         df["Return Date"] = None
 
-      # Session state for standard/bulk material rates, rent types, quantities, and return dates
+      # Session state initialization
       if "akg_std_rates" not in st.session_state:
         st.session_state.akg_std_rates = {}
       if "akg_rent_types" not in st.session_state:
@@ -323,7 +323,6 @@ def run():
                       key="bulk_mat_select",
                   )
 
-                  # Get current/default values for this material
                   default_bulk_rate = float(
                       st.session_state.akg_std_rates.get(selected_mat, 0.0)
                   )
@@ -364,12 +363,21 @@ def run():
                         min_value=0.0,
                         format="%.2f",
                     )
-                    bulk_qty_val = st.number_input(
-                        "Quantity for this Material",
-                        value=def_qty,
-                        min_value=0.0,
-                        format="%.2f",
+                    # Checkbox placed before conditional fields
+                    is_returned_bulk = st.checkbox(
+                        "Has Material Been Returned?",
+                        value=True if pd.notnull(def_ret) else False,
                     )
+
+                    bulk_qty_val = def_qty
+                    if is_returned_bulk:
+                      bulk_qty_val = st.number_input(
+                          "Quantity Returned for this Material",
+                          value=def_qty,
+                          min_value=0.0,
+                          format="%.2f",
+                      )
+
                   with col_b2:
                     rent_basis_val = st.selectbox(
                         "Rent Calculation Basis:",
@@ -380,13 +388,12 @@ def run():
                             else (1 if default_basis == "Day-wise" else 0)
                         ),
                     )
-                    is_returned_bulk = st.checkbox(
-                        "Has Material Been Returned?",
-                        value=True if pd.notnull(def_ret) else False,
-                    )
-                    bulk_return_date = st.date_input(
-                        "Material Return Date", value=default_date
-                    )
+
+                    bulk_return_date = None
+                    if is_returned_bulk:
+                      bulk_return_date = st.date_input(
+                          "Material Return Date", value=default_date
+                      )
 
                   submitted_bulk = st.form_submit_button(
                       "Apply All Settings to This Material Across All Entries"
@@ -395,17 +402,17 @@ def run():
                     final_ret_val = (
                         str(bulk_return_date) if is_returned_bulk else None
                     )
+                    final_qty_val = bulk_qty_val if is_returned_bulk else def_qty
 
                     st.session_state.akg_std_rates[selected_mat] = bulk_rate_val
                     st.session_state.akg_rent_types[selected_mat] = (
                         rent_basis_val
                     )
-                    st.session_state.akg_bulk_qtys[selected_mat] = bulk_qty_val
+                    st.session_state.akg_bulk_qtys[selected_mat] = final_qty_val
                     st.session_state.akg_bulk_returns[selected_mat] = (
                         final_ret_val
                     )
 
-                    # Also update main dataframe directly
                     if "Return Date" not in df.columns:
                       df["Return Date"] = None
 
@@ -413,7 +420,7 @@ def run():
                         (df[sup_col] == target_supplier)
                         & (df[mat_desc_col] == selected_mat),
                         qty_col,
-                    ] = bulk_qty_val
+                    ] = final_qty_val
                     df.loc[
                         (df[sup_col] == target_supplier)
                         & (df[mat_desc_col] == selected_mat),
