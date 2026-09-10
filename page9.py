@@ -404,8 +404,7 @@ def run():
 
         st.markdown("---")
         st.subheader(
-            "📦 Material Stock Ledger Summary (All Months / Cumulative Up to"
-            " Date)"
+            "📦 Material Stock Ledger "
         )
 
         mat_desc_col = next(
