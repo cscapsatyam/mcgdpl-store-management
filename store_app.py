@@ -156,7 +156,7 @@ page = st.radio(
         "7. Vendor Payments Entry",
         "8. Vendor Statement & Ledger",
         "9. AKG Shutterings Ledger",
-        "10. Daily Site & Manpower Report", #
+        "10. Daily Site & Manpower Report",
         
     ],
     horizontal=True,
@@ -1079,6 +1079,7 @@ if page == "9. AKG Shutterings Ledger":
       st.error("Supplier column not detected in dataset.")
   else:
     st.info("Please load data records first from the main upload page.")
+      
 # ================= PAGE 10: DAILY SITE & MANPOWER REPORT =================
 elif page == "10. Daily Site & Manpower Report":
   # page10.py లోపల ఉన్న ప్రధాన ఫంక్షన్‌ని ఇక్కడ కాల్ చేస్తున్నాం
