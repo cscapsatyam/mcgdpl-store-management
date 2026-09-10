@@ -17,8 +17,8 @@ def run():
 
   st.markdown("---")
 
-  # టేబుల్స్ క్లియర్‌గా కనిపించడానికి టూ కాలమ్స్ లేఅవుట్
-  col1, col2 = st.columns([1, 1])
+  # క్లీన్ అండ్ పర్ఫెక్ట్ స్పేసింగ్ కోసం కాలమ్స్ రేషియో మార్చాం
+  col1, col2 = st.columns([1, 1.1])
 
   # --- 1. STAFF REPORT SECTION ---
   with col1:
@@ -87,7 +87,7 @@ def run():
         staff_df,
         hide_index=True,
         use_container_width=True,
-        height=380,  # టేబుల్ సైజ్ పర్ఫెక్ట్ గా కనిపించడానికి హైట్ సెట్ చేశాం
+        height=355,  # పర్ఫెక్ట్ హైట్ సెట్ చేయబడింది
         key="staff_report_table",
     )
 
@@ -98,12 +98,10 @@ def run():
   with col2:
     st.subheader("👷 MANPOWER REPORT")
 
-    st.markdown("##### 1. Sub-Contractor Manpower Details")
+    st.markdown("##### 1. Sub-Contractor Manpower")
     sub_data = [
         {
-            "Sub-Contractor Details": (
-                "Steel reinforcement, shuttering, concreting & shifting"
-            ),
+            "Sub-Contractor Details": "Steel reinforcement, shuttering & concreting",
             "Mr. NVVS Murthi": 13,
             "Mr. Keshava": 0,
         }
@@ -113,29 +111,25 @@ def run():
         sub_df,
         hide_index=True,
         use_container_width=True,
-        height=100,
+        height=75,
         key="sub_contractor_table",
     )
 
-    st.markdown("##### 2. NMR Manpower Details")
+    st.markdown("##### 2. NMR Manpower")
     nmr_data = [
         {
-            "NMR Type": "A. NMR Regular Staff (MD Murshad)",
+            "NMR Type": "A. Regular Staff (MD Murshad)",
             "Mestri": 1,
             "Helper": 2,
         },
-        {
-            "NMR Type": "B. NMR Daily Wage (Local Labour)",
-            "Mestri": 0,
-            "Helper": 0,
-        },
+        {"NMR Type": "B. Daily Wage (Local)", "Mestri": 0, "Helper": 0},
     ]
     nmr_df = pd.DataFrame(nmr_data)
     edited_nmr_df = st.data_editor(
         nmr_df,
         hide_index=True,
         use_container_width=True,
-        height=120,
+        height=95,
         key="nmr_table",
     )
 
@@ -151,25 +145,21 @@ def run():
         vehicle_df,
         hide_index=True,
         use_container_width=True,
-        height=170,
+        height=140,
         key="vehicle_table",
     )
 
     st.markdown("##### 4. Security Details")
     security_data = [
-        {"Security Details": "A. Supervisor (Day/Night)", "Day": 1, "Night": 1},
-        {
-            "Security Details": "B. Security Guards (Day/Night)",
-            "Day": 1,
-            "Night": 1,
-        },
+        {"Security Details": "A. Supervisor", "Day": 1, "Night": 1},
+        {"Security Details": "B. Guards", "Day": 1, "Night": 1},
     ]
     security_df = pd.DataFrame(security_data)
     edited_security_df = st.data_editor(
         security_df,
         hide_index=True,
         use_container_width=True,
-        height=110,
+        height=95,
         key="security_table",
     )
 
