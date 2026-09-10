@@ -3,6 +3,7 @@ import numpy as np
 import pandas as pd
 import streamlit as st
 import datetime
+import page10
 
 st.set_page_config(
     page_title="Movone Infrastructue Private Limited", layout="wide"
@@ -155,7 +156,7 @@ page = st.radio(
         "7. Vendor Payments Entry",
         "8. Vendor Statement & Ledger",
         "9. AKG Shutterings Ledger",
-        "10. Daily Site & Manpower Report",
+        "10. Daily Site & Manpower Report", #
         
     ],
     horizontal=True,
