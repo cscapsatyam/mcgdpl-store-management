@@ -5,7 +5,7 @@ import streamlit as st
 import datetime
 
 st.set_page_config(
-    page_title="Enterprise Store Management System", layout="wide"
+    page_title="Movone Infrastructue Private Limited", layout="wide"
 )
 
 # Custom Styling with Professional ERP Look & A4 Border Print Layout
