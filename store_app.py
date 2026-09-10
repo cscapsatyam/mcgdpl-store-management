@@ -1,9 +1,9 @@
+import datetime
 import os
 import numpy as np
 import pandas as pd
-import streamlit as st
-import datetime
 import page10
+import streamlit as st
 
 st.set_page_config(
     page_title="Movone Infrastructue Private Limited", layout="wide"
@@ -157,7 +157,6 @@ page = st.radio(
         "8. Vendor Statement & Ledger",
         "9. AKG Shutterings Ledger",
         "10. Daily Site & Manpower Report",
-        
     ],
     horizontal=True,
 )
@@ -353,7 +352,6 @@ elif page == "7. Vendor Payments Entry":
 
       suppliers_unique = list(df[sup_col].dropna().unique())
 
-      # --- TOP SELECTOR FOR SUPPLIER ---
       selected_summary_sup = st.selectbox(
           "🔍 Select Vendor Account:",
           suppliers_unique,
@@ -362,7 +360,6 @@ elif page == "7. Vendor Payments Entry":
 
       st.markdown("---")
 
-      # --- CALCULATE FINANCIAL STANDING FOR SELECTED SUPPLIER ---
       sup_filtered_df = df[df[sup_col] == selected_summary_sup]
       total_inv_amt = sup_filtered_df[val_col].sum()
 
@@ -377,7 +374,6 @@ elif page == "7. Vendor Payments Entry":
 
       net_out = total_inv_amt - total_paid_amt
 
-      # Display Metrics
       m_col1, m_col2, m_col3 = st.columns(3)
       m_col1.metric("Total Invoice Amount", f"₹ {total_inv_amt:,.2f}")
       m_col2.metric("Total Paid Amount", f"₹ {total_paid_amt:,.2f}")
@@ -403,10 +399,8 @@ elif page == "7. Vendor Payments Entry":
 
       st.markdown("---")
 
-      # --- TWO ACTION BUTTONS FOR POP-UPS (View Payment History removed) ---
       b_col1, b_col2 = st.columns(2)
 
-      # 1. ADD NEW PAYMENT POPUP BUTTON
       with b_col1:
         if st.button("➕ Add New Payment", use_container_width=True):
 
@@ -452,7 +446,6 @@ elif page == "7. Vendor Payments Entry":
 
           show_payment_popup()
 
-      # 2. VENDOR STATEMENT & LEDGER REPORT POPUP BUTTON (WITH PDF / PRINT OPTION)
       with b_col2:
         if st.button("📑 Full Statement & Ledger", use_container_width=True):
 
@@ -660,9 +653,7 @@ elif page in [
 
 
 # ================= PAGE 9: AKG SHUTTERINGS DEDICATED LEDGER =================
-if page == "9. AKG Shutterings Ledger":
-  import datetime
-  
+elif page == "9. AKG Shutterings Ledger":
   st.title(
       "📑 AKG SHUTTERINGS PRIVATE LIMITED - Rental, Stock Ledger & Tax"
   )
@@ -681,14 +672,12 @@ if page == "9. AKG Shutterings Ledger":
           df[df[sup_col] == target_supplier].copy().reset_index(drop=True)
       )
 
-      # 'Return Date' కాలమ్ మెయిన్ డేటాఫ్రేమ్‌లో లేదా sup_invoices లో లేకపోతే ఆటోమేటిక్‌గా క్రియేట్ చేస్తుంది
       if "Return Date" not in sup_invoices.columns:
         sup_invoices["Return Date"] = None
       if "Return Date" not in df.columns:
         df["Return Date"] = None
 
       if not sup_invoices.empty:
-        # 1. Month-wise Value Filter
         date_col = (
             "Actualy Recived Date"
             if "Actualy Recived Date" in sup_invoices.columns
@@ -716,7 +705,6 @@ if page == "9. AKG Shutterings Ledger":
         else:
           filtered_sup_invoices = sup_invoices.copy()
 
-        # 2. డే-వైస్, మంత్లీ రెంట్ మరియు 18% టాక్స్ కాలిక్యులేషన్ లాజిక్
         if "Actualy Recived Date" in filtered_sup_invoices.columns:
           filtered_sup_invoices["Actualy Recived Date DT"] = pd.to_datetime(
               filtered_sup_invoices["Actualy Recived Date"], errors="coerce"
@@ -787,7 +775,6 @@ if page == "9. AKG Shutterings Ledger":
         else:
           filtered_sup_invoices.insert(0, "S.No", range(1, len(filtered_sup_invoices) + 1))
 
-        # మొత్తం ఇన్‌వాయిస్ అమౌంట్ అన్ని నెలలకి కలిపి లెక్కింపు
         if qty_col in sup_invoices.columns:
           sup_invoices[qty_col] = pd.to_numeric(
               sup_invoices[qty_col].astype(str).str.replace(r"[^\d.]", "", regex=True), errors="coerce"
@@ -836,7 +823,6 @@ if page == "9. AKG Shutterings Ledger":
 
         net_outstanding = total_inv_amt - total_paid_amt
 
-        # మెట్రిక్స్ డిస్‌ప్లే
         col_m1, col_m2, col_m3 = st.columns(3)
         col_m1.metric("📦 Total Rent Value (inc. 18% Tax)", f"₹ {total_inv_amt:,.2f}")
         col_m2.metric("💳 Total Paid Value", f"₹ {total_paid_amt:,.2f}")
@@ -844,7 +830,6 @@ if page == "9. AKG Shutterings Ledger":
 
         st.markdown("---")
 
-        # Expander for Updates
         with st.expander(
             "✏️ Click Here to Update Return Date, Qty & Rates / Add Payment",
             expanded=False,
@@ -1011,7 +996,6 @@ if page == "9. AKG Shutterings Ledger":
             key="akg_inv_table",
         )
 
-        # ================= STOCK LEDGER SUMMARY =================
         st.markdown("---")
         st.subheader("📦 Material Stock Ledger Summary (All Months / Cumulative Up to Date)")
 
@@ -1082,5 +1066,4 @@ if page == "9. AKG Shutterings Ledger":
       
 # ================= PAGE 10: DAILY SITE & MANPOWER REPORT =================
 elif page == "10. Daily Site & Manpower Report":
-  # page10.py లోపల ఉన్న ప్రధాన ఫంక్షన్‌ని ఇక్కడ కాల్ చేస్తున్నాం
   page10.run()
