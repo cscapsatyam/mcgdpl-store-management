@@ -655,6 +655,7 @@ elif page in [
   )
   st.info("Module ready for operational deployment.")
 
+
 # ================= PAGE 9: AKG SHUTTERINGS DEDICATED LEDGER =================
 if page == "9. AKG Shutterings Ledger":
   import datetime
@@ -676,6 +677,12 @@ if page == "9. AKG Shutterings Ledger":
       sup_invoices = (
           df[df[sup_col] == target_supplier].copy().reset_index(drop=True)
       )
+
+      # 'Return Date' కాలమ్ మెయిన్ డేటాఫ్రేమ్‌లో లేదా sup_invoices లో లేకపోతే ఆటోమేటిక్‌గా క్రియేట్ చేస్తుంది
+      if "Return Date" not in sup_invoices.columns:
+        sup_invoices["Return Date"] = None
+      if "Return Date" not in df.columns:
+        df["Return Date"] = None
 
       if not sup_invoices.empty:
         # 1. Month-wise Value Filter
@@ -711,9 +718,6 @@ if page == "9. AKG Shutterings Ledger":
           filtered_sup_invoices["Actualy Recived Date DT"] = pd.to_datetime(
               filtered_sup_invoices["Actualy Recived Date"], errors="coerce"
           )
-
-          if "Return Date" not in filtered_sup_invoices.columns:
-            filtered_sup_invoices["Return Date"] = None
 
           filtered_sup_invoices["Return Date DT"] = pd.to_datetime(
               filtered_sup_invoices["Return Date"], errors="coerce"
@@ -791,8 +795,6 @@ if page == "9. AKG Shutterings Ledger":
         full_calc_df = sup_invoices.copy()
         if "Actualy Recived Date" in full_calc_df.columns:
           full_calc_df["Actualy Recived Date DT"] = pd.to_datetime(full_calc_df["Actualy Recived Date"], errors="coerce")
-          if "Return Date" not in full_calc_df.columns:
-            full_calc_df["Return Date"] = None
           full_calc_df["Return Date DT"] = pd.to_datetime(full_calc_df["Return Date"], errors="coerce")
           eff_ret = full_calc_df["Return Date DT"].fillna(pd.to_datetime("today"))
           full_calc_df["Total Days"] = (eff_ret - full_calc_df["Actualy Recived Date DT"]).dt.days.apply(lambda x: max(int(x), 1))
@@ -1074,7 +1076,4 @@ if page == "9. AKG Shutterings Ledger":
       st.error("Supplier column not detected in dataset.")
   else:
     st.info("Please load data records first from the main upload page.")
-
-
-
 
