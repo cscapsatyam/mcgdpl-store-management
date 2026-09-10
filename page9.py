@@ -362,8 +362,7 @@ def run():
 
         st.markdown("---")
         st.subheader(
-            "📂  ("📦 AKG Shutterings Material Receiving Status")
-            " Shutterings"
+            "📂  AKG Shutterings Material Receiving Status"
         )
 
         desired_cols = [
