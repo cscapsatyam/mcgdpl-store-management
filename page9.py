@@ -4,11 +4,7 @@ import streamlit as st
 
 
 def run():
-  st.title("📑 AKG SHUTTERINGS PRIVATE LIMITED - Rental, Stock Ledger & Tax")
-  st.markdown(
-      "Exclusive statement breakdown including Store Entry, Return Dates,"
-      " Monthly Stock Rent, Stock Ledger, and 18% Tax Calculation."
-  )
+  st.subheader("📦 AKG Shutterings Material Receiving Status")
 
   if "current_df" in st.session_state and not st.session_state.current_df.empty:
     df = st.session_state.current_df.copy()
