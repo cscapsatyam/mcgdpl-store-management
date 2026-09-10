@@ -1,6 +1,113 @@
 import datetime
+import io
 import pandas as pd
+from reportlab.lib.pagesizes import letter
+from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
+from reportlab.lib import colors
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 import streamlit as st
+
+
+def generate_akg_pdf_invoice(
+    report_df, selected_month_str, target_supplier, total_base, total_with_tax
+):
+  buffer = io.BytesIO()
+  doc = SimpleDocTemplate(
+      buffer, pagesize=letter, rightMargin=36, leftMargin=36, topMargin=36, bottomMargin=36
+  )
+  elements = []
+  styles = getSampleStyleSheet()
+
+  title_style = ParagraphStyle(
+      'InvoiceTitle',
+      parent=styles['Heading1'],
+      fontSize=16,
+      alignment=1,
+      textColor=colors.HexColor('#1f2937'),
+      spaceAfter=6,
+  )
+  sub_style = ParagraphStyle(
+      'InvoiceSub',
+      parent=styles['Normal'],
+      fontSize=10,
+      alignment=1,
+      textColor=colors.HexColor('#4b5563'),
+      spaceAfter=15,
+  )
+  cell_style = ParagraphStyle(
+      'TableCell', parent=styles['Normal'], fontSize=9, textColor=colors.HexColor('#1f2937')
+  )
+  header_style = ParagraphStyle(
+      'TableHeader',
+      parent=styles['Normal'],
+      fontSize=9,
+      fontName='Helvetica-Bold',
+      textColor=colors.white,
+  )
+
+  elements.append(Paragraph("<b>AKG SHUTTERINGS PRIVATE LIMITED</b>", title_style))
+  elements.append(
+      Paragraph(
+          f"Rental & Tax Statement — <b>{selected_month_str}</b><br/>Billed to: {target_supplier}",
+          sub_style,
+      )
+  )
+
+  table_data = [[
+      Paragraph("S.No", header_style),
+      Paragraph("Material Description", header_style),
+      Paragraph("Base Rate (₹)", header_style),
+      Paragraph("Total Qty", header_style),
+      Paragraph("Base Rent (₹)", header_style),
+      Paragraph("Total + 18% Tax (₹)", header_style),
+  ]]
+
+  for _, row in report_df.iterrows():
+    table_data.append([
+        Paragraph(str(row.get("S.No", "")), cell_style),
+        Paragraph(str(row.get("Description Of material", "")), cell_style),
+        Paragraph(f"{row.get('Base_Rate', 0):,.2f}", cell_style),
+        Paragraph(str(row.get("Total_Qty", 0)), cell_style),
+        Paragraph(f"{row.get('Base_Rent_Value', 0):,.2f}", cell_style),
+        Paragraph(f"{row.get('Total_Tax_18', 0):,.2f}", cell_style),
+    ])
+
+  t = Table(table_data, colWidths=[35, 210, 70, 55, 75, 95])
+  t.setStyle(
+      TableStyle([
+          ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#1f2937")),
+          ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+          ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+          ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+          ("TOPPADDING", (0, 0), (-1, -1), 6),
+          ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#d1d5db")),
+      ])
+  )
+  elements.append(t)
+  elements.append(Spacer(1, 15))
+
+  summary_style = ParagraphStyle(
+      'SummaryStyle',
+      parent=styles['Normal'],
+      fontSize=10,
+      fontName='Helvetica-Bold',
+      textColor=colors.HexColor('#1f2937'),
+  )
+  elements.append(
+      Paragraph(
+          f"Total Base Rent (Without Tax): ₹ {total_base:,.2f}", summary_style
+      )
+  )
+  elements.append(
+      Paragraph(
+          f"Total Rent Value (With 18% Tax): ₹ {total_with_tax:,.2f}",
+          summary_style,
+      )
+  )
+
+  doc.build(elements)
+  buffer.seek(0)
+  return buffer.getvalue()
 
 
 def run():
@@ -620,6 +727,23 @@ def run():
             col_tot2.metric(
                 "Total Rent Value (With 18% Tax)",
                 f"₹ {total_month_tax_rent:,.2f}",
+            )
+
+            # PDF Download Button Section
+            st.markdown("")
+            pdf_bytes = generate_akg_pdf_invoice(
+                material_report,
+                selected_dropdown_month,
+                target_supplier,
+                total_month_base_rent,
+                total_month_tax_rent,
+            )
+            st.download_button(
+                label="📥 Download Active Rent Invoice (PDF)",
+                data=pdf_bytes,
+                file_name=f"AKG_Invoice_{selected_month_name}_{selected_year_val}.pdf",
+                mime="application/pdf",
+                key="download_pdf_invoice_btn",
             )
 
           else:
