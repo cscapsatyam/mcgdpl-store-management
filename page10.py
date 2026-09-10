@@ -8,7 +8,7 @@ def run():
   st.markdown("### PROJECT : MCGDPL6111 (MIPL) — Daily Staff & Manpower Report")
 
   # టాప్ డేట్ మరియు డే డిస్‌ప్లే
-  col_h1, col_h2 = st.columns(2)
+  col_h1, col_h2 = st.columns([2, 1])
   with col_h1:
     report_date = st.date_input("📅 Select Report Date:", datetime.date.today())
   with col_h2:
@@ -17,7 +17,8 @@ def run():
 
   st.markdown("---")
 
-  col1, col2 = st.columns([1.1, 1.1])
+  # టేబుల్స్ క్లియర్‌గా కనిపించడానికి టూ కాలమ్స్ లేఅవుట్
+  col1, col2 = st.columns([1, 1])
 
   # --- 1. STAFF REPORT SECTION ---
   with col1:
@@ -86,6 +87,7 @@ def run():
         staff_df,
         hide_index=True,
         use_container_width=True,
+        height=380,  # టేబుల్ సైజ్ పర్ఫెక్ట్ గా కనిపించడానికి హైట్ సెట్ చేశాం
         key="staff_report_table",
     )
 
@@ -96,12 +98,11 @@ def run():
   with col2:
     st.subheader("👷 MANPOWER REPORT")
 
-    st.markdown("#### 1. Sub-Contractor Manpower Details")
+    st.markdown("##### 1. Sub-Contractor Manpower Details")
     sub_data = [
         {
             "Sub-Contractor Details": (
-                "Steel reinforcement works, shuttering works, rod bending,"
-                " concreting, and material shifting"
+                "Steel reinforcement, shuttering, concreting & shifting"
             ),
             "Mr. NVVS Murthi": 13,
             "Mr. Keshava": 0,
@@ -112,15 +113,14 @@ def run():
         sub_df,
         hide_index=True,
         use_container_width=True,
+        height=100,
         key="sub_contractor_table",
     )
 
-    st.markdown("#### 2. NMR Manpower Details")
+    st.markdown("##### 2. NMR Manpower Details")
     nmr_data = [
         {
-            "NMR Type": (
-                "A. NMR Regular Staff (MD Murshad Labour Contractor)"
-            ),
+            "NMR Type": "A. NMR Regular Staff (MD Murshad)",
             "Mestri": 1,
             "Helper": 2,
         },
@@ -132,10 +132,14 @@ def run():
     ]
     nmr_df = pd.DataFrame(nmr_data)
     edited_nmr_df = st.data_editor(
-        nmr_df, hide_index=True, use_container_width=True, key="nmr_table"
+        nmr_df,
+        hide_index=True,
+        use_container_width=True,
+        height=120,
+        key="nmr_table",
     )
 
-    st.markdown("#### 3. Hired Vehicle Details")
+    st.markdown("##### 3. Hired Vehicle Details")
     vehicle_data = [
         {"Vehicle Type": "A. Hydra", "Helper": 0, "Operator": 0},
         {"Vehicle Type": "B. JCB", "Helper": 0, "Operator": 0},
@@ -147,10 +151,11 @@ def run():
         vehicle_df,
         hide_index=True,
         use_container_width=True,
+        height=170,
         key="vehicle_table",
     )
 
-    st.markdown("#### 4. Security Details")
+    st.markdown("##### 4. Security Details")
     security_data = [
         {"Security Details": "A. Supervisor (Day/Night)", "Day": 1, "Night": 1},
         {
@@ -164,6 +169,7 @@ def run():
         security_df,
         hide_index=True,
         use_container_width=True,
+        height=110,
         key="security_table",
     )
 
