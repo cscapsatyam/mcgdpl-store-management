@@ -2,6 +2,7 @@ import os
 import numpy as np
 import pandas as pd
 import streamlit as st
+import datetime
 
 st.set_page_config(
     page_title="Enterprise Store Management System", layout="wide"
@@ -654,9 +655,10 @@ elif page in [
   )
   st.info("Module ready for operational deployment.")
 
-
 # ================= PAGE 9: AKG SHUTTERINGS DEDICATED LEDGER =================
 if page == "9. AKG Shutterings Ledger":
+  import datetime
+  
   st.title(
       "📑 AKG SHUTTERINGS PRIVATE LIMITED - Rental, Stock Ledger & Tax"
   )
@@ -1072,4 +1074,7 @@ if page == "9. AKG Shutterings Ledger":
       st.error("Supplier column not detected in dataset.")
   else:
     st.info("Please load data records first from the main upload page.")
+
+
+
 
