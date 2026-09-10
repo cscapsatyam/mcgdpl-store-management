@@ -9,7 +9,13 @@ import streamlit as st
 
 
 def generate_akg_pdf_invoice(
-    report_df, selected_month_str, target_supplier, total_basic, total_with_tax
+    report_df,
+    selected_month_str,
+    target_supplier,
+    total_basic,
+    total_with_tax,
+    start_date_str,
+    end_date_str,
 ):
   buffer = io.BytesIO()
   doc = SimpleDocTemplate(
@@ -24,15 +30,15 @@ def generate_akg_pdf_invoice(
       fontSize=16,
       alignment=1,
       textColor=colors.HexColor('#1f2937'),
-      spaceAfter=6,
+      spaceAfter=4,
   )
   sub_style = ParagraphStyle(
       'InvoiceSub',
       parent=styles['Normal'],
-      fontSize=10,
+      fontSize=9,
       alignment=1,
       textColor=colors.HexColor('#4b5563'),
-      spaceAfter=15,
+      spaceAfter=12,
   )
   cell_style = ParagraphStyle(
       'TableCell', parent=styles['Normal'], fontSize=9, textColor=colors.HexColor('#1f2937')
@@ -48,7 +54,9 @@ def generate_akg_pdf_invoice(
   elements.append(Paragraph("<b>AKG SHUTTERINGS PRIVATE LIMITED</b>", title_style))
   elements.append(
       Paragraph(
-          f"Rental & Tax Statement — <b>{selected_month_str}</b><br/>Billed to: {target_supplier}",
+          f"Rental & Tax Statement — <b>{selected_month_str}</b><br/>"
+          f"Billed to: {target_supplier}<br/>"
+          f"<b>Period:</b> {start_date_str} to {end_date_str}",
           sub_style,
       )
   )
@@ -56,9 +64,9 @@ def generate_akg_pdf_invoice(
   table_data = [[
       Paragraph("S.No", header_style),
       Paragraph("Material Description", header_style),
-      Paragraph("basic Rate (₹)", header_style),
+      Paragraph("Basic Rate (₹)", header_style),
       Paragraph("Total Qty", header_style),
-      Paragraph("basic Rent (₹)", header_style),
+      Paragraph("Basic Rent (₹)", header_style),
       Paragraph("Total + 18% Tax (₹)", header_style),
   ]]
 
@@ -95,7 +103,7 @@ def generate_akg_pdf_invoice(
   )
   elements.append(
       Paragraph(
-          f"Total basic Rent (Without Tax): ₹ {total_basic:,.2f}", summary_style
+          f"Total Basic Rent (Without Tax): ₹ {total_basic:,.2f}", summary_style
       )
   )
   elements.append(
@@ -313,7 +321,7 @@ def run():
           )
 
           with tab_p1:
-            with st.form("akg_bulk_rate_form_v15"):
+            with st.form("akg_bulk_rate_form_v16"):
               st.subheader("Set Rent Rate (Day-wise Basis)")
               if mat_desc_col:
                 unique_materials = list(
@@ -323,7 +331,7 @@ def run():
                   selected_mat_1 = st.selectbox(
                       "Select Material Name / Description:",
                       unique_materials,
-                      key="bulk_mat_select_1_v15",
+                      key="bulk_mat_select_1_v16",
                   )
 
                   default_bulk_rate = float(
@@ -362,7 +370,7 @@ def run():
                 st.warning("Material description column not available.")
 
           with tab_p2:
-            with st.form("akg_return_qty_form_v15"):
+            with st.form("akg_return_qty_form_v16"):
               st.subheader("Update Material Return & Quantity")
               if mat_desc_col:
                 unique_materials = list(
@@ -372,7 +380,7 @@ def run():
                   selected_mat_2 = st.selectbox(
                       "Select Material Name / Description:",
                       unique_materials,
-                      key="bulk_mat_select_2_v15",
+                      key="bulk_mat_select_2_v16",
                   )
 
                   mat_rows_check = sup_invoices[
@@ -469,10 +477,10 @@ def run():
                 editable_df,
                 hide_index=True,
                 use_container_width=True,
-                key="specific_material_data_editor_v15",
+                key="specific_material_data_editor_v16",
             )
 
-            if st.button("Save Modifications", key="save_mod_btn_v15"):
+            if st.button("Save Modifications", key="save_mod_btn_v16"):
               for idx, row in edited_result_df.iterrows():
                 orig_idx = row["Original_Index"]
                 df.loc[orig_idx, qty_col] = row[qty_col]
@@ -484,7 +492,7 @@ def run():
               st.rerun()
 
           with tab_p4:
-            with st.form("akg_payment_form_v15"):
+            with st.form("akg_payment_form_v16"):
               st.subheader("Add Payment Entry")
               st.text_input(
                   "Vendor Name", value=target_supplier, disabled=True
@@ -511,7 +519,7 @@ def run():
                   st.session_state.payments_df = pd.DataFrame(
                       columns=[
                           "Supplier Name",
-                          "Payment Date",
+                      "Payment Date",
                           "Paid Amount",
                           "Payment Mode",
                           "Reference No",
@@ -563,7 +571,7 @@ def run():
                 "📂 Select Month:",
                 months_list,
                 index=default_m_idx,
-                key="akg_dropdown_month_v15",
+                key="akg_dropdown_month_v16",
             )
           with col_y_sel:
             current_year = datetime.datetime.now().year
@@ -576,7 +584,7 @@ def run():
                 "📅 Select Year:",
                 years_list,
                 index=default_y_idx,
-                key="akg_dropdown_year_v15",
+                key="akg_dropdown_year_v16",
             )
 
           selected_dropdown_month = f"{selected_month_name} {selected_year_val}"
@@ -619,6 +627,12 @@ def run():
                 row_copy = row.copy()
                 row_copy["Month_basic_Rent"] = month_basic_rent
                 row_copy["Month_Tax_18"] = round(month_basic_rent * 1.18, 2)
+                row_copy["Effective_Start_Date"] = effective_start.strftime(
+                    "%d-%m-%Y"
+                )
+                row_copy["Effective_End_Date"] = effective_end.strftime(
+                    "%d-%m-%Y"
+                )
                 active_rows.append(row_copy)
 
           if active_rows:
@@ -630,6 +644,8 @@ def run():
                     Total_Qty=(qty_col, "sum"),
                     basic_Rent_Value=("Month_basic_Rent", "sum"),
                     Total_Tax_18=("Month_Tax_18", "sum"),
+                    Min_Start=("Effective_Start_Date", "min"),
+                    Max_End=("Effective_End_Date", "max"),
                 )
                 .reset_index()
             )
@@ -659,32 +675,45 @@ def run():
                         "Material Description", width="large"
                     ),
                     "basic_Rate": st.column_config.NumberColumn(
-                        "basic Rate (₹)", format="₹ %.2f", width="medium"
+                        "Basic Rate (₹)", format="₹ %.2f", width="medium"
                     ),
                     "Total_Qty": st.column_config.NumberColumn(
                         "Total Qty", width="small"
                     ),
                     "basic_Rent_Value": st.column_config.NumberColumn(
-                        "basic Rent (₹)", format="₹ %.2f", width="medium"
+                        "Basic Rent (₹)", format="₹ %.2f", width="medium"
                     ),
                     "Total_Tax_18": st.column_config.NumberColumn(
                         "Total + 18% Tax (₹)",
                         format="₹ %.2f",
                         width="medium",
                     ),
+                    "Min_Start": st.column_config.TextColumn("Start Date"),
+                    "Max_End": st.column_config.TextColumn("Up-to Date"),
                 },
-                key="mat_report_active_table_v15",
+                key="mat_report_active_table_v16",
             )
 
             total_month_basic_rent = material_report["basic_Rent_Value"].sum()
             total_month_tax_rent = material_report["Total_Tax_18"].sum()
+
+            overall_start_str = (
+                material_report["Min_Start"].min()
+                if not material_report.empty
+                else month_start.strftime("%d-%m-%Y")
+            )
+            overall_end_str = (
+                material_report["Max_End"].max()
+                if not material_report.empty
+                else month_end.strftime("%d-%m-%Y")
+            )
 
             st.markdown(
                 f"**📊 Total Rent Breakdown for {selected_dropdown_month}:**"
             )
             col_tot1, col_tot2 = st.columns(2)
             col_tot1.metric(
-                "Total basic Rent (Without Tax)",
+                "Total Basic Rent (Without Tax)",
                 f"₹ {total_month_basic_rent:,.2f}",
             )
             col_tot2.metric(
@@ -692,7 +721,7 @@ def run():
                 f"₹ {total_month_tax_rent:,.2f}",
             )
 
-            # PDF Download Button Section
+            # PDF Download Button Section with Dates
             st.markdown("")
             pdf_bytes = generate_akg_pdf_invoice(
                 material_report,
@@ -700,13 +729,15 @@ def run():
                 target_supplier,
                 total_month_basic_rent,
                 total_month_tax_rent,
+                overall_start_str,
+                overall_end_str,
             )
             st.download_button(
                 label="📥 Download Active Rent Invoice (PDF)",
                 data=pdf_bytes,
                 file_name=f"AKG_Invoice_{selected_month_name}_{selected_year_val}.pdf",
                 mime="application/pdf",
-                key="download_pdf_invoice_btn",
+                key="download_pdf_invoice_btn_v16",
             )
 
           else:
@@ -745,7 +776,7 @@ def run():
             ordered_sup_invoices,
             hide_index=True,
             use_container_width=True,
-            key="akg_inv_table_v15",
+            key="akg_inv_table_v16",
         )
 
         st.markdown("---")
@@ -787,7 +818,7 @@ def run():
               stock_summary,
               hide_index=True,
               use_container_width=True,
-              key="akg_stock_ledger_table_v15",
+              key="akg_stock_ledger_table_v16",
           )
         else:
           st.info("Material description column not found for stock ledger.")
@@ -799,7 +830,7 @@ def run():
               sup_payments,
               hide_index=True,
               use_container_width=True,
-              key="akg_pay_table_v15",
+              key="akg_pay_table_v16",
           )
         else:
           st.info("No payment transactions recorded for this vendor yet.")
