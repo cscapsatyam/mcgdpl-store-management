@@ -217,7 +217,7 @@ def run():
           )
 
           with tab_p1:
-            with st.form("akg_bulk_rate_form_v10"):
+            with st.form("akg_bulk_rate_form_v12"):
               st.subheader("Set Rent Rate & Calculation Basis")
               if mat_desc_col:
                 unique_materials = list(
@@ -227,7 +227,7 @@ def run():
                   selected_mat_1 = st.selectbox(
                       "Select Material Name / Description:",
                       unique_materials,
-                      key="bulk_mat_select_1_v10",
+                      key="bulk_mat_select_1_v12",
                   )
 
                   default_bulk_rate = float(
@@ -287,7 +287,7 @@ def run():
                 st.warning("Material description column not available.")
 
           with tab_p2:
-            with st.form("akg_return_qty_form_v10"):
+            with st.form("akg_return_qty_form_v12"):
               st.subheader("Update Material Return & Quantity")
               if mat_desc_col:
                 unique_materials = list(
@@ -297,7 +297,7 @@ def run():
                   selected_mat_2 = st.selectbox(
                       "Select Material Name / Description:",
                       unique_materials,
-                      key="bulk_mat_select_2_v10",
+                      key="bulk_mat_select_2_v12",
                   )
 
                   mat_rows_check = sup_invoices[
@@ -394,10 +394,10 @@ def run():
                 editable_df,
                 hide_index=True,
                 use_container_width=True,
-                key="specific_material_data_editor_v10",
+                key="specific_material_data_editor_v12",
             )
 
-            if st.button("Save Modifications", key="save_mod_btn_v10"):
+            if st.button("Save Modifications", key="save_mod_btn_v12"):
               for idx, row in edited_result_df.iterrows():
                 orig_idx = row["Original_Index"]
                 df.loc[orig_idx, qty_col] = row[qty_col]
@@ -409,7 +409,7 @@ def run():
               st.rerun()
 
           with tab_p4:
-            with st.form("akg_payment_form_v10"):
+            with st.form("akg_payment_form_v12"):
               st.subheader("Add Payment Entry")
               st.text_input(
                   "Vendor Name", value=target_supplier, disabled=True
@@ -488,7 +488,7 @@ def run():
                 "📂 Select Month:",
                 months_list,
                 index=default_m_idx,
-                key="akg_dropdown_month_v10",
+                key="akg_dropdown_month_v12",
             )
           with col_y_sel:
             current_year = datetime.datetime.now().year
@@ -501,7 +501,7 @@ def run():
                 "📅 Select Year:",
                 years_list,
                 index=default_y_idx,
-                key="akg_dropdown_year_v10",
+                key="akg_dropdown_year_v12",
             )
 
           selected_dropdown_month = f"{selected_month_name} {selected_year_val}"
@@ -559,15 +559,34 @@ def run():
                   0, "S.No", range(1, len(material_report) + 1)
               )
 
-            st.data_editor(
+            # Compact table rendering to avoid unnecessary full-width stretching
+            st.dataframe(
                 material_report,
                 hide_index=True,
                 use_container_width=True,
-                disabled=True,
-                key="mat_report_active_table_v10",
+                column_config={
+                    "S.No": st.column_config.NumberColumn("S.No", width="small"),
+                    mat_desc_col: st.column_config.TextColumn(
+                        "Material Description", width="large"
+                    ),
+                    "Base_Rate": st.column_config.NumberColumn(
+                        "Base Rate (₹)", format="₹ %.2f", width="medium"
+                    ),
+                    "Total_Qty": st.column_config.NumberColumn(
+                        "Total Qty", width="small"
+                    ),
+                    "Base_Rent_Value": st.column_config.NumberColumn(
+                        "Base Rent (₹)", format="₹ %.2f", width="medium"
+                    ),
+                    "Total_Tax_18": st.column_config.NumberColumn(
+                        "Total + 18% Tax (₹)",
+                        format="₹ %.2f",
+                        width="medium",
+                    ),
+                },
+                key="mat_report_active_table_v12",
             )
 
-            # Total Value Calculation & Display for this Month
             total_month_base_rent = material_report["Base_Rent_Value"].sum()
             total_month_tax_rent = material_report["Total_Tax_18"].sum()
 
@@ -616,12 +635,11 @@ def run():
         other_cols = [c for c in sup_invoices.columns if c not in existing_cols]
         ordered_sup_invoices = sup_invoices[existing_cols + other_cols]
 
-        st.data_editor(
+        st.dataframe(
             ordered_sup_invoices,
             hide_index=True,
             use_container_width=True,
-            disabled=True,
-            key="akg_inv_table_v10",
+            key="akg_inv_table_v12",
         )
 
         st.markdown("---")
@@ -659,12 +677,11 @@ def run():
           else:
             stock_summary.insert(0, "S.No", range(1, len(stock_summary) + 1))
 
-          st.data_editor(
+          st.dataframe(
               stock_summary,
               hide_index=True,
               use_container_width=True,
-              disabled=True,
-              key="akg_stock_ledger_table_v10",
+              key="akg_stock_ledger_table_v12",
           )
         else:
           st.info("Material description column not found for stock ledger.")
@@ -672,12 +689,11 @@ def run():
         st.markdown("---")
         st.subheader("💳 Payment Disbursement Log — AKG Shutterings")
         if not sup_payments.empty:
-          st.data_editor(
+          st.dataframe(
               sup_payments,
               hide_index=True,
               use_container_width=True,
-              disabled=True,
-              key="akg_pay_table_v10",
+              key="akg_pay_table_v12",
           )
         else:
           st.info("No payment transactions recorded for this vendor yet.")
