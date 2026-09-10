@@ -540,8 +540,9 @@ def run():
             material_report = (
                 month_sub_df.groupby(mat_desc_col)
                 .agg(
-                    Base_Rate=(rate_col, "first"),
+                    
                     Total_Qty=(qty_col, "sum"),
+                    Base_Rate=(rate_col, "first"),
                     Base_Rent_Value=("Base Rent Value", "sum"),
                     Total_Tax_18=("Total Rent with 18% Tax", "sum"),
                 )
