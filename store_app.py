@@ -654,6 +654,7 @@ elif page in [
   )
   st.info("Module ready for operational deployment.")
 
+
 # ================= PAGE 9: AKG SHUTTERINGS DEDICATED LEDGER =================
 if page == "9. AKG Shutterings Ledger":
   st.title(
@@ -675,7 +676,7 @@ if page == "9. AKG Shutterings Ledger":
       )
 
       if not sup_invoices.empty:
-        # 1. Month-wise Value Filter (rent breakdown కోసం మాత్రమే ఫిల్టర్)
+        # 1. Month-wise Value Filter
         date_col = (
             "Actualy Recived Date"
             if "Actualy Recived Date" in sup_invoices.columns
@@ -731,7 +732,7 @@ if page == "9. AKG Shutterings Ledger":
               filtered_sup_invoices["Total Days"] / 30.0
           ).round(2)
 
-        possible_qty_cols = ["Qty", "Quantity", "Nos"]
+        possible_qty_cols = ["Qty", "Quantity", "Nos", "Receiving Qty"]
         possible_rate_cols = ["Rate", "Unit Rate", "Rent Rate"]
 
         qty_col = next(
@@ -777,7 +778,7 @@ if page == "9. AKG Shutterings Ledger":
         else:
           filtered_sup_invoices.insert(0, "S.No", range(1, len(filtered_sup_invoices) + 1))
 
-        # మొత్తం ఇన్‌వాయిస్ అమౌంట్ అన్ని నెలలకి కలిపి లెక్కింపు (సవరించిన కోడ్)
+        # మొత్తం ఇన్‌వాయిస్ అమౌంట్ అన్ని నెలలకి కలిపి లెక్కింపు
         if qty_col in sup_invoices.columns:
           sup_invoices[qty_col] = pd.to_numeric(
               sup_invoices[qty_col].astype(str).str.replace(r"[^\d.]", "", regex=True), errors="coerce"
@@ -785,7 +786,6 @@ if page == "9. AKG Shutterings Ledger":
         else:
           sup_invoices[qty_col] = 0.0
         
-        # అన్ని నెలల టోటల్ రెంట్ వాల్యూ కోసం పూర్తి డేటాను లెక్కించడం
         full_calc_df = sup_invoices.copy()
         if "Actualy Recived Date" in full_calc_df.columns:
           full_calc_df["Actualy Recived Date DT"] = pd.to_datetime(full_calc_df["Actualy Recived Date"], errors="coerce")
@@ -1004,7 +1004,7 @@ if page == "9. AKG Shutterings Ledger":
             key="akg_inv_table",
         )
 
-        # ================= STOCK LEDGER SUMMARY (ALL MONTHS / UP TO DATE) =================
+        # ================= STOCK LEDGER SUMMARY =================
         st.markdown("---")
         st.subheader("📦 Material Stock Ledger Summary (All Months / Cumulative Up to Date)")
 
@@ -1072,5 +1072,4 @@ if page == "9. AKG Shutterings Ledger":
       st.error("Supplier column not detected in dataset.")
   else:
     st.info("Please load data records first from the main upload page.")
-
 
