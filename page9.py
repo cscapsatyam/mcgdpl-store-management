@@ -35,80 +35,14 @@ def run():
         st.session_state.akg_bulk_returns = {}
 
       if not sup_invoices.empty:
-        date_col = (
-            "Actualy Recived Date"
-            if "Actualy Recived Date" in sup_invoices.columns
-            else None
-        )
-        if date_col:
-          sup_invoices["Month_Year"] = pd.to_datetime(
-              sup_invoices[date_col], errors="coerce"
-          ).dt.strftime("%B %Y")
-
-          # 2025 మరియు 2026 సహా అన్ని సంవత్సరాల నెలలను ఆటోమేటిక్‌గా జనరేట్ చేయడం
-          all_months = [
-              "January",
-              "February",
-              "March",
-              "April",
-              "May",
-              "June",
-              "July",
-              "August",
-              "September",
-              "October",
-              "November",
-              "December",
-          ]
-
-          # డేటాలో ఉన్న ఇయర్స్‌తో పాటు 2026ని కూడా కచ్చితంగా చేర్చడం కోసం
-          years_present = (
-              pd.to_datetime(sup_invoices[date_col], errors="coerce")
-              .dt.year.dropna()
-              .unique()
-              .tolist()
-          )
-          if 2026 not in years_present:
-            years_present.append(2026)
-
-          months_list = ["All Months"]
-          for yr in sorted(years_present):
-            for m in all_months:
-              months_list.append(f"{m} {int(yr)}")
-
-          col_f1, _ = st.columns([2, 4])
-          with col_f1:
-            selected_month = st.selectbox(
-                "📅 Filter by Month & Year (2025 & 2026):",
-                months_list,
-                key="akg_month_filter_v2",
-            )
-
-          filtered_sup_invoices = sup_invoices.copy()
-          if selected_month != "All Months":
-            filtered_sup_invoices = filtered_sup_invoices[
-                filtered_sup_invoices["Month_Year"] == selected_month
-            ]
-        else:
-          filtered_sup_invoices = sup_invoices.copy()
-
         possible_qty_cols = ["Qty", "Quantity", "Nos", "Receiving Qty"]
         possible_rate_cols = ["Rate", "Unit Rate", "Rent Rate"]
 
         qty_col = next(
-            (
-                c
-                for c in possible_qty_cols
-                if c in filtered_sup_invoices.columns
-            ),
-            "Qty",
+            (c for c in possible_qty_cols if c in sup_invoices.columns), "Qty"
         )
         rate_col = next(
-            (
-                c
-                for c in possible_rate_cols
-                if c in filtered_sup_invoices.columns
-            ),
+            (c for c in possible_rate_cols if c in sup_invoices.columns),
             "Rate",
         )
         mat_desc_col = next(
@@ -119,78 +53,80 @@ def run():
                     "Material Name",
                     "Item Description",
                 ]
-                if c in filtered_sup_invoices.columns
+                if c in sup_invoices.columns
             ),
             None,
         )
 
         if mat_desc_col:
           for mat_name, std_rate in st.session_state.akg_std_rates.items():
-            filtered_sup_invoices.loc[
-                filtered_sup_invoices[mat_desc_col] == mat_name, rate_col
+            sup_invoices.loc[
+                sup_invoices[mat_desc_col] == mat_name, rate_col
             ] = std_rate
-            sup_invoices.loc[sup_invoices[mat_desc_col] == mat_name, rate_col] = (
-                std_rate
-            )
+            df.loc[
+                (df[sup_col] == target_supplier)
+                & (df[mat_desc_col] == mat_name),
+                rate_col,
+            ] = std_rate
 
           for mat_name, b_qty in st.session_state.akg_bulk_qtys.items():
-            filtered_sup_invoices.loc[
-                filtered_sup_invoices[mat_desc_col] == mat_name, qty_col
-            ] = b_qty
             sup_invoices.loc[sup_invoices[mat_desc_col] == mat_name, qty_col] = (
                 b_qty
             )
+            df.loc[
+                (df[sup_col] == target_supplier)
+                & (df[mat_desc_col] == mat_name),
+                qty_col,
+            ] = b_qty
 
           for mat_name, b_ret in st.session_state.akg_bulk_returns.items():
-            filtered_sup_invoices.loc[
-                filtered_sup_invoices[mat_desc_col] == mat_name, "Return Date"
-            ] = b_ret
             sup_invoices.loc[
                 sup_invoices[mat_desc_col] == mat_name, "Return Date"
             ] = b_ret
+            df.loc[
+                (df[sup_col] == target_supplier)
+                & (df[mat_desc_col] == mat_name),
+                "Return Date",
+            ] = b_ret
 
-        if qty_col not in filtered_sup_invoices.columns:
-          filtered_sup_invoices[qty_col] = 1.0
-        if rate_col not in filtered_sup_invoices.columns:
-          filtered_sup_invoices[rate_col] = 0.0
+        if qty_col not in sup_invoices.columns:
+          sup_invoices[qty_col] = 1.0
+        if rate_col not in sup_invoices.columns:
+          sup_invoices[rate_col] = 0.0
 
-        filtered_sup_invoices[qty_col] = pd.to_numeric(
-            filtered_sup_invoices[qty_col]
+        sup_invoices[qty_col] = pd.to_numeric(
+            sup_invoices[qty_col]
             .astype(str)
             .str.replace(r"[^\d.]", "", regex=True),
             errors="coerce",
         ).fillna(0)
-        filtered_sup_invoices[rate_col] = pd.to_numeric(
-            filtered_sup_invoices[rate_col]
+        sup_invoices[rate_col] = pd.to_numeric(
+            sup_invoices[rate_col]
             .astype(str)
             .str.replace(r"[^\d.]", "", regex=True),
             errors="coerce",
         ).fillna(0)
 
-        if "Actualy Recived Date" in filtered_sup_invoices.columns:
-          filtered_sup_invoices["Actualy Recived Date DT"] = pd.to_datetime(
-              filtered_sup_invoices["Actualy Recived Date"], errors="coerce"
+        if "Actualy Recived Date" in sup_invoices.columns:
+          sup_invoices["Actualy Recived Date DT"] = pd.to_datetime(
+              sup_invoices["Actualy Recived Date"], errors="coerce"
           )
-          filtered_sup_invoices["Return Date DT"] = pd.to_datetime(
-              filtered_sup_invoices["Return Date"], errors="coerce"
+          sup_invoices["Return Date DT"] = pd.to_datetime(
+              sup_invoices["Return Date"], errors="coerce"
           )
-          effective_return_dt = filtered_sup_invoices["Return Date DT"].fillna(
+          effective_return_dt = sup_invoices["Return Date DT"].fillna(
               pd.to_datetime("today")
           )
 
-          filtered_sup_invoices["Total Days"] = (
-              effective_return_dt
-              - filtered_sup_invoices["Actualy Recived Date DT"]
+          sup_invoices["Total Days"] = (
+              effective_return_dt - sup_invoices["Actualy Recived Date DT"]
           ).dt.days
-          filtered_sup_invoices["Total Days"] = filtered_sup_invoices[
-              "Total Days"
-          ].fillna(1)
-          filtered_sup_invoices["Total Days"] = filtered_sup_invoices[
-              "Total Days"
-          ].apply(lambda x: max(int(x), 1))
-
-          filtered_sup_invoices["Calculated Months"] = (
-              filtered_sup_invoices["Total Days"] / 30.0
+          sup_invoices["Total Days"] = sup_invoices["Total Days"].fillna(1)
+          sup_invoices["Total Days"] = sup_invoices["Total Days"].apply(
+              lambda x: max(int(x), 1)
+          )
+          sup_invoices["Calculated Months"] = (
+              sup_invoices["Total Days"] / 30.0
           ).round(2)
 
         def get_rent_basis(row):
@@ -200,9 +136,7 @@ def run():
             return st.session_state["akg_rent_types"][row[mat_desc_col]]
           return "Monthly"
 
-        filtered_sup_invoices["Rent Basis"] = filtered_sup_invoices.apply(
-            get_rent_basis, axis=1
-        )
+        sup_invoices["Rent Basis"] = sup_invoices.apply(get_rent_basis, axis=1)
 
         def calc_base_rent(row):
           qty = row[qty_col]
@@ -212,82 +146,24 @@ def run():
           else:
             return round(qty * rate * row["Calculated Months"], 2)
 
-        filtered_sup_invoices["Base Rent Value"] = filtered_sup_invoices.apply(
+        sup_invoices["Base Rent Value"] = sup_invoices.apply(
             calc_base_rent, axis=1
         )
-        filtered_sup_invoices["CGST (9%)"] = (
-            filtered_sup_invoices["Base Rent Value"] * 0.09
+        sup_invoices["CGST (9%)"] = (
+            sup_invoices["Base Rent Value"] * 0.09
         ).round(2)
-        filtered_sup_invoices["SGST (9%)"] = (
-            filtered_sup_invoices["Base Rent Value"] * 0.09
+        sup_invoices["SGST (9%)"] = (
+            sup_invoices["Base Rent Value"] * 0.09
         ).round(2)
-        filtered_sup_invoices["Total Rent with 18% Tax"] = (
-            filtered_sup_invoices["Base Rent Value"]
-            + filtered_sup_invoices["CGST (9%)"]
-            + filtered_sup_invoices["SGST (9%)"]
-        ).round(2)
-
-        if "S.No" in filtered_sup_invoices.columns:
-          filtered_sup_invoices["S.No"] = range(
-              1, len(filtered_sup_invoices) + 1
-          )
-        else:
-          filtered_sup_invoices.insert(
-              0, "S.No", range(1, len(filtered_sup_invoices) + 1)
-          )
-
-        full_calc_df = sup_invoices.copy()
-        if "Actualy Recived Date" in full_calc_df.columns:
-          full_calc_df["Actualy Recived Date DT"] = pd.to_datetime(
-              full_calc_df["Actualy Recived Date"], errors="coerce"
-          )
-          full_calc_df["Return Date DT"] = pd.to_datetime(
-              full_calc_df["Return Date"], errors="coerce"
-          )
-          eff_ret = full_calc_df["Return Date DT"].fillna(
-              pd.to_datetime("today")
-          )
-          full_calc_df["Total Days"] = (
-              eff_ret - full_calc_df["Actualy Recived Date DT"]
-          ).dt.days.apply(lambda x: max(int(x), 1))
-          full_calc_df["Calculated Months"] = (
-              full_calc_df["Total Days"] / 30.0
-          ).round(2)
-        else:
-          full_calc_df["Calculated Months"] = 1.0
-
-        if qty_col not in full_calc_df.columns:
-          full_calc_df[qty_col] = 0.0
-        full_calc_df[qty_col] = pd.to_numeric(
-            full_calc_df[qty_col]
-            .astype(str)
-            .str.replace(r"[^\d.]", "", regex=True),
-            errors="coerce",
-        ).fillna(0)
-
-        if rate_col not in full_calc_df.columns:
-          full_calc_df[rate_col] = 0.0
-        full_calc_df[rate_col] = pd.to_numeric(
-            full_calc_df[rate_col]
-            .astype(str)
-            .str.replace(r"[^\d.]", "", regex=True),
-            errors="coerce",
-        ).fillna(0)
-
-        full_calc_df["Rent Basis"] = full_calc_df.apply(get_rent_basis, axis=1)
-        full_calc_df["Base Rent Value"] = full_calc_df.apply(
-            lambda r: (
-                round(r[qty_col] * r[rate_col] * r["Total Days"], 2)
-                if r["Rent Basis"] == "Day-wise"
-                else round(r[qty_col] * r[rate_col] * r["Calculated Months"], 2)
-            ),
-            axis=1,
-        )
-        full_calc_df["Total Rent with 18% Tax"] = (
-            full_calc_df["Base Rent Value"] * 1.18
+        sup_invoices["Total Rent with 18% Tax"] = (
+            sup_invoices["Base Rent Value"]
+            + sup_invoices["CGST (9%)"]
+            + sup_invoices["SGST (9%)"]
         ).round(2)
 
-        total_inv_amt = full_calc_df["Total Rent with 18% Tax"].sum()
+        sup_invoices.insert(0, "S.No", range(1, len(sup_invoices) + 1))
+
+        total_inv_amt = sup_invoices["Total Rent with 18% Tax"].sum()
 
         if (
             "payments_df" in st.session_state
@@ -335,7 +211,7 @@ def run():
           )
 
           with tab_p1:
-            with st.form("akg_bulk_rate_form_v2"):
+            with st.form("akg_bulk_rate_form_v3"):
               st.subheader("Set Rent Rate & Calculation Basis")
               if mat_desc_col:
                 unique_materials = list(
@@ -345,7 +221,7 @@ def run():
                   selected_mat_1 = st.selectbox(
                       "Select Material Name / Description:",
                       unique_materials,
-                      key="bulk_mat_select_1_v2",
+                      key="bulk_mat_select_1_v3",
                   )
 
                   default_bulk_rate = float(
@@ -405,7 +281,7 @@ def run():
                 st.warning("Material description column not available.")
 
           with tab_p2:
-            with st.form("akg_return_qty_form_v2"):
+            with st.form("akg_return_qty_form_v3"):
               st.subheader("Update Material Return & Quantity")
               if mat_desc_col:
                 unique_materials = list(
@@ -415,7 +291,7 @@ def run():
                   selected_mat_2 = st.selectbox(
                       "Select Material Name / Description:",
                       unique_materials,
-                      key="bulk_mat_select_2_v2",
+                      key="bulk_mat_select_2_v3",
                   )
 
                   mat_rows_check = sup_invoices[
@@ -496,7 +372,7 @@ def run():
 
           with tab_p3:
             st.subheader("Modify Specific Material Records")
-            editable_df = filtered_sup_invoices[
+            editable_df = sup_invoices[
                 [
                     "Store Entry No",
                     "Actualy Recived Date",
@@ -506,16 +382,16 @@ def run():
                     rate_col,
                 ]
             ].copy()
-            editable_df["Original_Index"] = filtered_sup_invoices.index
+            editable_df["Original_Index"] = sup_invoices.index
 
             edited_result_df = st.data_editor(
                 editable_df,
                 hide_index=True,
                 use_container_width=True,
-                key="specific_material_data_editor_v2",
+                key="specific_material_data_editor_v3",
             )
 
-            if st.button("Save Modifications", key="save_mod_btn_v2"):
+            if st.button("Save Modifications", key="save_mod_btn_v3"):
               for idx, row in edited_result_df.iterrows():
                 orig_idx = row["Original_Index"]
                 df.loc[orig_idx, qty_col] = row[qty_col]
@@ -527,7 +403,7 @@ def run():
               st.rerun()
 
           with tab_p4:
-            with st.form("akg_payment_form_v2"):
+            with st.form("akg_payment_form_v3"):
               st.subheader("Add Payment Entry")
               st.text_input(
                   "Vendor Name", value=target_supplier, disabled=True
@@ -574,94 +450,123 @@ def run():
         st.subheader("📑 Month-wise & Material-wise Breakdown Report")
 
         if (
-            "Actualy Recived Date" in filtered_sup_invoices.columns
+            "Actualy Recived Date" in sup_invoices.columns
             and mat_desc_col
+            and not sup_invoices.empty
         ):
-          filtered_sup_invoices["Billing Month"] = pd.to_datetime(
-              filtered_sup_invoices["Actualy Recived Date"], errors="coerce"
-          ).dt.strftime("%B %Y")
-
-          years_present_mat = (
-              pd.to_datetime(
-                  filtered_sup_invoices["Actualy Recived Date"], errors="coerce"
-              )
-              .dt.year.dropna()
-              .unique()
-              .tolist()
-          )
-          if 2026 not in years_present_mat:
-            years_present_mat.append(2026)
-
-          full_months_list = []
-          for yr in sorted(years_present_mat):
-            for m in [
-                "January",
-                "February",
-                "March",
-                "April",
-                "May",
-                "June",
-                "July",
-                "August",
-                "September",
-                "October",
-                "November",
-                "December",
-            ]:
-              full_months_list.append(f"{m} {int(yr)}")
-
-          if full_months_list:
-            col_d1, _ = st.columns([2, 4])
-            with col_d1:
-              selected_dropdown_month = st.selectbox(
-                  "📂 Select Month (Material Breakdown - 2025 & 2026):",
-                  full_months_list,
-                  key="akg_material_dropdown_month_v2",
-              )
-
-            st.markdown(
-                f"### Material-wise Rent for **{selected_dropdown_month}**"
+          # మెటీరియల్ సైట్‌లో ఉన్న ప్రతి నెలా (रिसीవ్ అయిన నెల నుండి రిటర్న్/ప్రస్తుత నెల వరకు) లిస్ట్ తయారు చేయడం
+          all_months_set = []
+          for idx, row in sup_invoices.iterrows():
+            rec_dt = pd.to_datetime(
+                row["Actualy Recived Date"], errors="coerce"
             )
+            ret_dt = (
+                pd.to_datetime(row["Return Date"], errors="coerce")
+                if pd.notnull(row["Return Date"])
+                else pd.Timestamp("today")
+            )
+            if pd.notnull(rec_dt):
+              curr = rec_dt.replace(day=1)
+              while curr <= ret_dt.replace(day=1):
+                m_str = curr.strftime("%B %Y")
+                if m_str not in all_months_set:
+                  all_months_set.append(m_str)
+                # Next month
+                if curr.month == 12:
+                  curr = curr.replace(year=curr.year + 1, month=1)
+                else:
+                  curr = curr.replace(month=curr.month + 1)
 
-            month_sub_df = filtered_sup_invoices[
-                filtered_sup_invoices["Billing Month"] == selected_dropdown_month
+          if not all_months_set:
+            # Fallback 2025-2026 months
+            all_months_set = [
+                f"{m} {y}"
+                for y in [2025, 2026]
+                for m in [
+                    "January",
+                    "February",
+                    "March",
+                    "April",
+                    "May",
+                    "June",
+                    "July",
+                    "August",
+                    "September",
+                    "October",
+                    "November",
+                    "December",
+                ]
             ]
 
-            if not month_sub_df.empty:
-              material_report = (
-                  month_sub_df.groupby(mat_desc_col)
-                  .agg(
-                      Total_Qty=(qty_col, "sum"),
-                      Total_Base_Rent=("Base Rent Value", "sum"),
-                      Total_Tax_18=("Total Rent with 18% Tax", "sum"),
-                  )
-                  .reset_index()
+          col_d1, _ = st.columns([2, 4])
+          with col_d1:
+            selected_dropdown_month = st.selectbox(
+                "📂 Select Month (Active Materials Breakdown):",
+                all_months_set,
+                key="akg_material_dropdown_active_months",
+            )
+
+          st.markdown(
+              f"### Material-wise Active Rent for **{selected_dropdown_month}**"
+          )
+
+          # ఆ నిర్దిష్ట నెలలో సైట్‌లో యాక్టివ్‌గా ఉన్న (రిసీవ్ అయి, ఇంకా రిటర్న్ కాని లేదా ఆ నెలలో ఉండిన) మెటీరియల్స్ ఫిల్టర్ చేయడం
+          sel_m_dt = pd.to_datetime(selected_dropdown_month, format="%B %Y")
+
+          active_rows = []
+          for idx, row in sup_invoices.iterrows():
+            r_dt = pd.to_datetime(row["Actualy Recived Date"], errors="coerce")
+            ret_dt = (
+                pd.to_datetime(row["Return Date"], errors="coerce")
+                if pd.notnull(row["Return Date"])
+                else pd.Timestamp("today")
+            )
+
+            if pd.notnull(r_dt):
+              r_month_start = r_dt.replace(
+                  day=1, hour=0, minute=0, second=0, microsecond=0
+              )
+              ret_month_start = ret_dt.replace(
+                  day=1, hour=0, minute=0, second=0, microsecond=0
               )
 
-              material_report["Total_Base_Rent"] = material_report[
-                  "Total_Base_Rent"
-              ].round(2)
-              material_report["Total_Tax_18"] = material_report[
-                  "Total_Tax_18"
-              ].round(2)
-              material_report.insert(
-                  0, "S.No", range(1, len(material_report) + 1)
-              )
+              if r_month_start <= sel_m_dt <= ret_month_start:
+                active_rows.append(row)
 
-              st.data_editor(
-                  material_report,
-                  hide_index=True,
-                  use_container_width=True,
-                  disabled=True,
-                  key="mat_report_dropdown_table_v2",
-              )
-            else:
-              st.info(
-                  f"ఈ నెల ({selected_dropdown_month}) లో ఎలాంటి మెటీరియల్ రికార్డ్స్"
-                  " లేవు."
-              )
+          if active_rows:
+            month_sub_df = pd.DataFrame(active_rows)
+            material_report = (
+                month_sub_df.groupby(mat_desc_col)
+                .agg(
+                    Total_Qty=(qty_col, "sum"),
+                    Total_Base_Rent=("Base Rent Value", "sum"),
+                    Total_Tax_18=("Total Rent with 18% Tax", "sum"),
+                )
+                .reset_index()
+            )
+
+            material_report["Total_Base_Rent"] = material_report[
+                "Total_Base_Rent"
+            ].round(2)
+            material_report["Total_Tax_18"] = material_report[
+                "Total_Tax_18"
+            ].round(2)
+            material_report.insert(
+                0, "S.No", range(1, len(material_report) + 1)
+            )
+
+            st.data_editor(
+                material_report,
+                hide_index=True,
+                use_container_width=True,
+                disabled=True,
+                key="mat_report_active_table",
+            )
           else:
-            st.info("సరిపడా మంత్లీ డేటా అందుబాటులో లేదు.")
+            st.info(
+                f"ఈ నెల ({selected_dropdown_month}) లో ఎలాంటి యాక్టివ్ మెటీరియల్స్"
+                " లేవు."
+            )
         else:
           st.info("సరిపడా డేటా అందుబాటులో లేదు.")
 
@@ -686,24 +591,16 @@ def run():
             "SGST (9%)",
             "Total Rent with 18% Tax",
         ]
-        existing_cols = [
-            c
-            for c in desired_cols
-            if c and c in filtered_sup_invoices.columns
-        ]
-        other_cols = [
-            c for c in filtered_sup_invoices.columns if c not in existing_cols
-        ]
-        ordered_sup_invoices = filtered_sup_invoices[
-            existing_cols + other_cols
-        ]
+        existing_cols = [c for c in desired_cols if c and c in sup_invoices.columns]
+        other_cols = [c for c in sup_invoices.columns if c not in existing_cols]
+        ordered_sup_invoices = sup_invoices[existing_cols + other_cols]
 
         st.data_editor(
             ordered_sup_invoices,
             hide_index=True,
             use_container_width=True,
             disabled=True,
-            key="akg_inv_table_v2",
+            key="akg_inv_table_v3",
         )
 
         st.markdown("---")
@@ -742,7 +639,7 @@ def run():
               hide_index=True,
               use_container_width=True,
               disabled=True,
-              key="akg_stock_ledger_table_v2",
+              key="akg_stock_ledger_table_v3",
           )
         else:
           st.info("Material description column not found for stock ledger.")
@@ -755,7 +652,7 @@ def run():
               hide_index=True,
               use_container_width=True,
               disabled=True,
-              key="akg_pay_table_v2",
+              key="akg_pay_table_v3",
           )
         else:
           st.info("No payment transactions recorded for this vendor yet.")
