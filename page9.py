@@ -138,7 +138,7 @@ def run():
 
         sup_invoices["Rent Basis"] = sup_invoices.apply(get_rent_basis, axis=1)
 
-        def calc_base_rent(row):
+        def calc_basic_rent(row):
           qty = row[qty_col]
           rate = row[rate_col]
           if row["Rent Basis"] == "Day-wise":
@@ -146,17 +146,17 @@ def run():
           else:
             return round(qty * rate * row["Calculated Months"], 2)
 
-        sup_invoices["Base Rent Value"] = sup_invoices.apply(
-            calc_base_rent, axis=1
+        sup_invoices["basic Rent Value"] = sup_invoices.apply(
+            calc_basic_rent, axis=1
         )
         sup_invoices["CGST (9%)"] = (
-            sup_invoices["Base Rent Value"] * 0.09
+            sup_invoices["basic Rent Value"] * 0.09
         ).round(2)
         sup_invoices["SGST (9%)"] = (
-            sup_invoices["Base Rent Value"] * 0.09
+            sup_invoices["basic Rent Value"] * 0.09
         ).round(2)
         sup_invoices["Total Rent with 18% Tax"] = (
-            sup_invoices["Base Rent Value"]
+            sup_invoices["basic Rent Value"]
             + sup_invoices["CGST (9%)"]
             + sup_invoices["SGST (9%)"]
         ).round(2)
@@ -542,16 +542,16 @@ def run():
                 .agg(
                     
                     Total_Qty=(qty_col, "sum"),
-                    Base_Rate=(rate_col, "first"),
-                    Base_Rent_Value=("Base Rent Value", "sum"),
+                    basic_Rate=(rate_col, "first"),
+                    basic_Rent_Value=("basic Rent Value", "sum"),
                     Total_Tax_18=("Total Rent with 18% Tax", "sum"),
                 )
                 .reset_index()
             )
 
-            material_report["Base_Rate"] = material_report["Base_Rate"].round(2)
-            material_report["Base_Rent_Value"] = material_report[
-                "Base_Rent_Value"
+            material_report["basic_Rate"] = material_report["basic_Rate"].round(2)
+            material_report["basic_Rent_Value"] = material_report[
+                "basic_Rent_Value"
             ].round(2)
             material_report["Total_Tax_18"] = material_report[
                 "Total_Tax_18"
@@ -595,7 +595,7 @@ def run():
             "Rent Basis",
             "Total Days",
             "Calculated Months",
-            "Base Rent Value",
+            "basic Rent Value",
             "CGST (9%)",
             "SGST (9%)",
             "Total Rent with 18% Tax",
