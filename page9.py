@@ -51,7 +51,7 @@ def generate_akg_pdf_invoice(
       textColor=colors.white,
   )
 
-  elements.append(Paragraph("<b>AKG SHUTTERINGS PRIVATE LIMITED</b>", title_style))
+  elements.append(Paragraph("<b>MOVONE INFRASTRUCTURE PRIVATE LIMITED</b>", title_style))
   elements.append(
       Paragraph(
           f"Rental & Tax Statement — <b>{selected_month_str}</b><br/>"
@@ -153,7 +153,7 @@ def generate_stock_ledger_pdf(stock_df, target_supplier, upto_date_str):
       textColor=colors.white,
   )
 
-  elements.append(Paragraph("<b>AKG SHUTTERINGS PRIVATE LIMITED</b>", title_style))
+  elements.append(Paragraph("<b>MOVONE INFRASTRUCTURE PRIVATE LIMITED</b>", title_style))
   elements.append(
       Paragraph(
           f"Material Stock Ledger Summary (Up to: {upto_date_str})<br/><b>Supplier:</b> {target_supplier}",
@@ -161,7 +161,6 @@ def generate_stock_ledger_pdf(stock_df, target_supplier, upto_date_str):
       )
   )
 
-  # First Received Date తొలగించబడింది
   table_data = [[
       Paragraph("S.No", header_style),
       Paragraph("Material Description", header_style),
@@ -234,7 +233,7 @@ def generate_receiving_status_landscape_pdf(receiving_df, target_supplier):
       textColor=colors.white,
   )
 
-  elements.append(Paragraph("<b>AKG SHUTTERINGS PRIVATE LIMITED</b>", title_style))
+  elements.append(Paragraph("<b>MOVONE INFRASTRUCTURE PRIVATE LIMITED</b>", title_style))
   elements.append(
       Paragraph(f"Material Receiving Status Report — <b>{target_supplier}</b>", sub_style)
   )
@@ -282,7 +281,7 @@ def generate_receiving_status_landscape_pdf(receiving_df, target_supplier):
 
 
 def run():
-  st.title("📑 AKG SHUTTERINGS PRIVATE LIMITED - Rental, Stock Ledger & Tax")
+  st.title("📑 MOVONE INFRASTRUCTURE PRIVATE LIMITED - Rental, Stock Ledger & Tax")
   st.markdown(
       "Exclusive statement breakdown including Store Entry, Return Dates,"
       " Day-wise Rent, Stock Ledger, and 18% Tax Calculation."
@@ -486,7 +485,7 @@ def run():
           )
 
           with tab_p1:
-            with st.form("akg_bulk_rate_form_v22"):
+            with st.form("akg_bulk_rate_form_v23"):
               st.subheader("Set Rent Rate (Day-wise Basis)")
               if mat_desc_col:
                 unique_materials = list(
@@ -496,7 +495,7 @@ def run():
                   selected_mat_1 = st.selectbox(
                       "Select Material Name / Description:",
                       unique_materials,
-                      key="bulk_mat_select_1_v22",
+                      key="bulk_mat_select_1_v23",
                   )
 
                   default_bulk_rate = float(
@@ -535,7 +534,7 @@ def run():
                 st.warning("Material description column not available.")
 
           with tab_p2:
-            with st.form("akg_return_qty_form_v22"):
+            with st.form("akg_return_qty_form_v23"):
               st.subheader("Update Material Return & Quantity")
               if mat_desc_col:
                 unique_materials = list(
@@ -545,7 +544,7 @@ def run():
                   selected_mat_2 = st.selectbox(
                       "Select Material Name / Description:",
                       unique_materials,
-                      key="bulk_mat_select_2_v22",
+                      key="bulk_mat_select_2_v23",
                   )
 
                   mat_rows_check = sup_invoices[
@@ -642,10 +641,10 @@ def run():
                 editable_df,
                 hide_index=True,
                 use_container_width=True,
-                key="specific_material_data_editor_v22",
+                key="specific_material_data_editor_v23",
             )
 
-            if st.button("Save Modifications", key="save_mod_btn_v22"):
+            if st.button("Save Modifications", key="save_mod_btn_v23"):
               for idx, row in edited_result_df.iterrows():
                 orig_idx = row["Original_Index"]
                 df.loc[orig_idx, qty_col] = row[qty_col]
@@ -657,7 +656,7 @@ def run():
               st.rerun()
 
           with tab_p4:
-            with st.form("akg_payment_form_v22"):
+            with st.form("akg_payment_form_v23"):
               st.subheader("Add Payment Entry")
               st.text_input(
                   "Vendor Name", value=target_supplier, disabled=True
@@ -736,7 +735,7 @@ def run():
                     "📂 Select Month:",
                     months_list,
                     index=default_m_idx,
-                    key="akg_dropdown_month_v22",
+                    key="akg_dropdown_month_v23",
                 )
               with col_y_sel:
                 current_year = datetime.datetime.now().year
@@ -749,7 +748,7 @@ def run():
                     "📅 Select Year:",
                     years_list,
                     index=default_y_idx,
-                    key="akg_dropdown_year_v22",
+                    key="akg_dropdown_year_v23",
                 )
 
               selected_dropdown_month = (
@@ -870,7 +869,7 @@ def run():
                         "Min_Start": st.column_config.TextColumn("Start Date"),
                         "Max_End": st.column_config.TextColumn("Up-to Date"),
                     },
-                    key="mat_report_active_table_v22",
+                    key="mat_report_active_table_v23",
                 )
 
                 total_month_basic_rent = material_report[
@@ -915,9 +914,9 @@ def run():
                 st.download_button(
                     label="📥 Download Active Rent Invoice (PDF)",
                     data=pdf_bytes,
-                    file_name=f"AKG_Invoice_{selected_month_name}_{selected_year_val}.pdf",
+                    file_name=f"Movone_Invoice_{selected_month_name}_{selected_year_val}.pdf",
                     mime="application/pdf",
-                    key="download_pdf_invoice_btn_v22",
+                    key="download_pdf_invoice_btn_v23",
                 )
 
               else:
@@ -955,7 +954,7 @@ def run():
                 ordered_sup_invoices,
                 hide_index=True,
                 use_container_width=True,
-                key="akg_inv_table_v22",
+                key="akg_inv_table_v23",
             )
 
             st.markdown("")
@@ -963,9 +962,9 @@ def run():
             st.download_button(
                 label="📥 Download Material Receiving Status (Landscape PDF)",
                 data=rec_pdf_bytes,
-                file_name="AKG_Material_Receiving_Status_Landscape.pdf",
+                file_name="Movone_Material_Receiving_Status_Landscape.pdf",
                 mime="application/pdf",
-                key="download_receiving_status_landscape_pdf_v22",
+                key="download_receiving_status_landscape_pdf_v23",
             )
 
         st.markdown("---")
@@ -978,7 +977,7 @@ def run():
           ledger_upto_date = st.date_input(
               "📅 Select Ledger Up to Date:",
               value=datetime.date.today(),
-              key="ledger_calendar_upto_date_v22",
+              key="ledger_calendar_upto_date_v23",
           )
 
         ledger_upto_ts = pd.to_datetime(ledger_upto_date).normalize()
@@ -998,7 +997,6 @@ def run():
                 "Return Date"
             ].notnull()
 
-            # First_Received_Date తీసివేయబడింది, అవసరం లేదు కాబట్టి గ్రూపింగ్ నుండి తొలగించాం
             stock_summary = (
                 filtered_stock_df.groupby(mat_desc_col)
                 .agg(
@@ -1018,7 +1016,6 @@ def run():
                 - stock_summary["Returned_Qty"]
             )
             
-            # స్క్రీన్ మీద కూడా 'Up-to Date' కాలమ్ కనిపించడానికి డేటా యాడ్ చేయడం
             stock_summary["Up-to Date"] = ledger_upto_date.strftime("%d-%m-%Y")
 
             if "S.No" in stock_summary.columns:
@@ -1050,7 +1047,7 @@ def run():
                         "Up-to Date", width="medium"
                     ),
                 },
-                key="akg_stock_ledger_table_v22",
+                key="akg_stock_ledger_table_v23",
             )
 
             st.markdown("")
@@ -1060,9 +1057,9 @@ def run():
             st.download_button(
                 label="📥 Download Stock Ledger Summary (PDF)",
                 data=stock_pdf_bytes,
-                file_name=f"AKG_Material_Stock_Ledger_Up_To_{ledger_upto_date}.pdf",
+                file_name=f"Movone_Material_Stock_Ledger_Up_To_{ledger_upto_date}.pdf",
                 mime="application/pdf",
-                key="download_stock_ledger_pdf_btn_v22",
+                key="download_stock_ledger_pdf_btn_v23",
             )
           else:
             st.info("No records found up to the selected date.")
@@ -1076,7 +1073,7 @@ def run():
               sup_payments,
               hide_index=True,
               use_container_width=True,
-              key="akg_pay_table_v22",
+              key="akg_pay_table_v23",
           )
         else:
           st.info("No payment transactions recorded for this vendor yet.")
