@@ -25,11 +25,15 @@ def run():
       if "Return Date" not in df.columns:
         df["Return Date"] = None
 
-      # Session state for standard/bulk material rates and rent types
+      # Session state for standard/bulk material rates, rent types, quantities, and return dates
       if "akg_std_rates" not in st.session_state:
         st.session_state.akg_std_rates = {}
       if "akg_rent_types" not in st.session_state:
         st.session_state.akg_rent_types = {}
+      if "akg_bulk_qtys" not in st.session_state:
+        st.session_state.akg_bulk_qtys = {}
+      if "akg_bulk_returns" not in st.session_state:
+        st.session_state.akg_bulk_returns = {}
 
       if not sup_invoices.empty:
         date_col = (
@@ -95,8 +99,8 @@ def run():
             None,
         )
 
-        # Apply Standard/Bulk rates if set
-        if mat_desc_col and st.session_state.akg_std_rates:
+        # Apply Bulk/Standard values if set in session state
+        if mat_desc_col:
           for mat_name, std_rate in st.session_state.akg_std_rates.items():
             filtered_sup_invoices.loc[
                 filtered_sup_invoices[mat_desc_col] == mat_name, rate_col
@@ -104,6 +108,22 @@ def run():
             sup_invoices.loc[sup_invoices[mat_desc_col] == mat_name, rate_col] = (
                 std_rate
             )
+
+          for mat_name, b_qty in st.session_state.akg_bulk_qtys.items():
+            filtered_sup_invoices.loc[
+                filtered_sup_invoices[mat_desc_col] == mat_name, qty_col
+            ] = b_qty
+            sup_invoices.loc[sup_invoices[mat_desc_col] == mat_name, qty_col] = (
+                b_qty
+            )
+
+          for mat_name, b_ret in st.session_state.akg_bulk_returns.items():
+            filtered_sup_invoices.loc[
+                filtered_sup_invoices[mat_desc_col] == mat_name, "Return Date"
+            ] = b_ret
+            sup_invoices.loc[
+                sup_invoices[mat_desc_col] == mat_name, "Return Date"
+            ] = b_ret
 
         if qty_col not in filtered_sup_invoices.columns:
           filtered_sup_invoices[qty_col] = 1.0
@@ -149,19 +169,17 @@ def run():
               filtered_sup_invoices["Total Days"] / 30.0
           ).round(2)
 
-        # Assign Rent Type Column (Monthly vs Day-wise)
         def get_rent_basis(row):
           if mat_desc_col and row.get(mat_desc_col) in st.session_state.get(
               "akg_rent_types", {}
           ):
             return st.session_state["akg_rent_types"][row[mat_desc_col]]
-          return "Monthly"  # Default
+          return "Monthly"
 
         filtered_sup_invoices["Rent Basis"] = filtered_sup_invoices.apply(
             get_rent_basis, axis=1
         )
 
-        # Calculate Base Rent Value based on Basis (Monthly or Day-wise)
         def calc_base_rent(row):
           qty = row[qty_col]
           rate = row[rate_col]
@@ -194,16 +212,6 @@ def run():
               0, "S.No", range(1, len(filtered_sup_invoices) + 1)
           )
 
-        if qty_col in sup_invoices.columns:
-          sup_invoices[qty_col] = pd.to_numeric(
-              sup_invoices[qty_col]
-              .astype(str)
-              .str.replace(r"[^\d.]", "", regex=True),
-              errors="coerce",
-          ).fillna(0)
-        else:
-          sup_invoices[qty_col] = 0.0
-
         full_calc_df = sup_invoices.copy()
         if "Actualy Recived Date" in full_calc_df.columns:
           full_calc_df["Actualy Recived Date DT"] = pd.to_datetime(
@@ -224,15 +232,23 @@ def run():
         else:
           full_calc_df["Calculated Months"] = 1.0
 
-        if rate_col in full_calc_df.columns:
-          full_calc_df[rate_col] = pd.to_numeric(
-              full_calc_df[rate_col]
-              .astype(str)
-              .str.replace(r"[^\d.]", "", regex=True),
-              errors="coerce",
-          ).fillna(0)
-        else:
+        if qty_col not in full_calc_df.columns:
+          full_calc_df[qty_col] = 0.0
+        full_calc_df[qty_col] = pd.to_numeric(
+            full_calc_df[qty_col]
+            .astype(str)
+            .str.replace(r"[^\d.]", "", regex=True),
+            errors="coerce",
+        ).fillna(0)
+
+        if rate_col not in full_calc_df.columns:
           full_calc_df[rate_col] = 0.0
+        full_calc_df[rate_col] = pd.to_numeric(
+            full_calc_df[rate_col]
+            .astype(str)
+            .str.replace(r"[^\d.]", "", regex=True),
+            errors="coerce",
+        ).fillna(0)
 
         full_calc_df["Rent Basis"] = full_calc_df.apply(get_rent_basis, axis=1)
         full_calc_df["Base Rent Value"] = full_calc_df.apply(
@@ -282,110 +298,32 @@ def run():
         st.markdown("---")
 
         with st.expander(
-            "✏️ Click Here to Update Return Date, Qty & Rates / Set Bulk"
-            " Material Rate & Rent Basis / Add Payment",
+            "✏️ Click Here to Update / Set Bulk Material Rate, Basis, Qty,"
+            " Return Date & Add Payment",
             expanded=False,
         ):
-          tab_p1, tab_p2, tab_p3 = st.tabs(
+          tab_p1, tab_p2 = st.tabs(
               [
-                  "📦 Update Single Entry",
-                  "⚙️ Bulk Material Rate & Rent Basis",
+                  "⚙️ Bulk Material Master (Rate, Basis, Qty & Return Date)",
                   "💳 Add Payment",
               ]
           )
 
           with tab_p1:
-            with st.form("akg_rent_form"):
-              st.subheader("Update Individual Store Entry Return Date, Qty & Rate")
-              entry_col_name = (
-                  "Store Entry No"
-                  if "Store Entry No" in sup_invoices.columns
-                  else sup_invoices.columns[0]
-              )
-              entry_list = list(sup_invoices[entry_col_name].dropna().unique())
-
-              if entry_list:
-                selected_entry = st.selectbox(
-                    "Select Store Entry No:", entry_list
-                )
-
-                curr_row = sup_invoices[
-                    sup_invoices[entry_col_name] == selected_entry
-                ].iloc[0]
-                curr_qty = float(curr_row.get(qty_col, 1.0))
-                curr_rate = float(curr_row.get(rate_col, 0.0))
-
-                existing_ret_date = curr_row.get("Return Date")
-                default_date = (
-                    pd.to_datetime(existing_ret_date).date()
-                    if pd.notnull(existing_ret_date)
-                    else datetime.date.today()
-                )
-
-                col_e1, col_e2 = st.columns(2)
-                with col_e1:
-                  new_qty = st.number_input(
-                      "Quantity", value=curr_qty, min_value=0.0, format="%.2f"
-                  )
-                  is_returned = st.checkbox(
-                      "Has Material Been Returned?",
-                      value=True if pd.notnull(existing_ret_date) else False,
-                  )
-                with col_e2:
-                  new_rate = st.number_input(
-                      "Rent Rate (₹)",
-                      value=curr_rate,
-                      min_value=0.0,
-                      format="%.2f",
-                  )
-                  new_return_date = st.date_input(
-                      "Material Return Date", value=default_date
-                  )
-
-                submitted_rent = st.form_submit_button(
-                    "Save & Recalculate Rent"
-                )
-                if submitted_rent:
-                  final_ret_val = (
-                      str(new_return_date) if is_returned else None
-                  )
-
-                  if "Return Date" not in df.columns:
-                    df["Return Date"] = None
-
-                  df.loc[
-                      (df[sup_col] == target_supplier)
-                      & (df[entry_col_name] == selected_entry),
-                      qty_col,
-                  ] = new_qty
-                  df.loc[
-                      (df[sup_col] == target_supplier)
-                      & (df[entry_col_name] == selected_entry),
-                      rate_col,
-                  ] = new_rate
-                  df.loc[
-                      (df[sup_col] == target_supplier)
-                      & (df[entry_col_name] == selected_entry),
-                      "Return Date",
-                  ] = final_ret_val
-
-                  st.session_state.current_df = df
-                  st.success("Updated successfully!")
-                  st.rerun()
-              else:
-                st.warning("No store entries found.")
-
-          with tab_p2:
             with st.form("akg_bulk_rate_form"):
-              st.subheader("Set Rate and Rent Basis (Monthly / Day-wise)")
+              st.subheader("Manage Material Bulk Settings")
               if mat_desc_col:
                 unique_materials = list(
                     sup_invoices[mat_desc_col].dropna().unique()
                 )
                 if unique_materials:
                   selected_mat = st.selectbox(
-                      "Select Material Name / Description:", unique_materials
+                      "Select Material Name / Description:",
+                      unique_materials,
+                      key="bulk_mat_select",
                   )
+
+                  # Get current/default values for this material
                   default_bulk_rate = float(
                       st.session_state.akg_std_rates.get(selected_mat, 0.0)
                   )
@@ -393,11 +331,42 @@ def run():
                       selected_mat, "Monthly"
                   )
 
+                  mat_rows_check = sup_invoices[
+                      sup_invoices[mat_desc_col] == selected_mat
+                  ]
+                  def_qty = (
+                      float(mat_rows_check[qty_col].iloc[0])
+                      if not mat_rows_check.empty
+                      else 1.0
+                  )
+                  if selected_mat in st.session_state.akg_bulk_qtys:
+                    def_qty = st.session_state.akg_bulk_qtys[selected_mat]
+
+                  def_ret = (
+                      mat_rows_check["Return Date"].iloc[0]
+                      if not mat_rows_check.empty
+                      else None
+                  )
+                  if selected_mat in st.session_state.akg_bulk_returns:
+                    def_ret = st.session_state.akg_bulk_returns[selected_mat]
+
+                  default_date = (
+                      pd.to_datetime(def_ret).date()
+                      if pd.notnull(def_ret)
+                      else datetime.date.today()
+                  )
+
                   col_b1, col_b2 = st.columns(2)
                   with col_b1:
                     bulk_rate_val = st.number_input(
                         "Rent Rate for this Material (₹)",
                         value=default_bulk_rate,
+                        min_value=0.0,
+                        format="%.2f",
+                    )
+                    bulk_qty_val = st.number_input(
+                        "Quantity for this Material",
+                        value=def_qty,
                         min_value=0.0,
                         format="%.2f",
                     )
@@ -411,18 +380,54 @@ def run():
                             else (1 if default_basis == "Day-wise" else 0)
                         ),
                     )
+                    is_returned_bulk = st.checkbox(
+                        "Has Material Been Returned?",
+                        value=True if pd.notnull(def_ret) else False,
+                    )
+                    bulk_return_date = st.date_input(
+                        "Material Return Date", value=default_date
+                    )
 
                   submitted_bulk = st.form_submit_button(
-                      "Apply Rate & Basis to All Entries of this Material"
+                      "Apply All Settings to This Material Across All Entries"
                   )
                   if submitted_bulk:
+                    final_ret_val = (
+                        str(bulk_return_date) if is_returned_bulk else None
+                    )
+
                     st.session_state.akg_std_rates[selected_mat] = bulk_rate_val
                     st.session_state.akg_rent_types[selected_mat] = (
                         rent_basis_val
                     )
+                    st.session_state.akg_bulk_qtys[selected_mat] = bulk_qty_val
+                    st.session_state.akg_bulk_returns[selected_mat] = (
+                        final_ret_val
+                    )
+
+                    # Also update main dataframe directly
+                    if "Return Date" not in df.columns:
+                      df["Return Date"] = None
+
+                    df.loc[
+                        (df[sup_col] == target_supplier)
+                        & (df[mat_desc_col] == selected_mat),
+                        qty_col,
+                    ] = bulk_qty_val
+                    df.loc[
+                        (df[sup_col] == target_supplier)
+                        & (df[mat_desc_col] == selected_mat),
+                        rate_col,
+                    ] = bulk_rate_val
+                    df.loc[
+                        (df[sup_col] == target_supplier)
+                        & (df[mat_desc_col] == selected_mat),
+                        "Return Date",
+                    ] = final_ret_val
+
+                    st.session_state.current_df = df
                     st.success(
-                        f"Updated '{selected_mat}' -> Rate: ₹{bulk_rate_val},"
-                        f" Basis: {rent_basis_val} successfully!"
+                        f"Updated settings for '{selected_mat}' successfully!"
                     )
                     st.rerun()
                 else:
@@ -430,7 +435,7 @@ def run():
               else:
                 st.warning("Material description column not available.")
 
-          with tab_p3:
+          with tab_p2:
             with st.form("akg_payment_form"):
               st.subheader("Add Payment Entry")
               st.text_input(
