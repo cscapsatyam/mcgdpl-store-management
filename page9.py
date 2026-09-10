@@ -391,18 +391,19 @@ def run():
             "✏️ Click Here to Manage Material Settings & Payments",
             expanded=True,
         ):
-          tab_p1, tab_p2, tab_p3, tab_p4, tab_p5 = st.tabs(
+          tab_p1, tab_p2, tab_p3, tab_p4, tab_p5, tab_p6 = st.tabs(
               [
                   "⚙️ Set Rent Rate",
                   "🔄 Update Return & Qty",
                   "✏️ Edit Material Data",
                   "💳 Add Payment",
                   "📊 Month-wise Report",
+                  "📦 Receiving Status",
               ]
           )
 
           with tab_p1:
-            with st.form("akg_bulk_rate_form_v19"):
+            with st.form("akg_bulk_rate_form_v20"):
               st.subheader("Set Rent Rate (Day-wise Basis)")
               if mat_desc_col:
                 unique_materials = list(
@@ -412,7 +413,7 @@ def run():
                   selected_mat_1 = st.selectbox(
                       "Select Material Name / Description:",
                       unique_materials,
-                      key="bulk_mat_select_1_v19",
+                      key="bulk_mat_select_1_v20",
                   )
 
                   default_bulk_rate = float(
@@ -451,7 +452,7 @@ def run():
                 st.warning("Material description column not available.")
 
           with tab_p2:
-            with st.form("akg_return_qty_form_v19"):
+            with st.form("akg_return_qty_form_v20"):
               st.subheader("Update Material Return & Quantity")
               if mat_desc_col:
                 unique_materials = list(
@@ -461,7 +462,7 @@ def run():
                   selected_mat_2 = st.selectbox(
                       "Select Material Name / Description:",
                       unique_materials,
-                      key="bulk_mat_select_2_v19",
+                      key="bulk_mat_select_2_v20",
                   )
 
                   mat_rows_check = sup_invoices[
@@ -558,10 +559,10 @@ def run():
                 editable_df,
                 hide_index=True,
                 use_container_width=True,
-                key="specific_material_data_editor_v19",
+                key="specific_material_data_editor_v20",
             )
 
-            if st.button("Save Modifications", key="save_mod_btn_v19"):
+            if st.button("Save Modifications", key="save_mod_btn_v20"):
               for idx, row in edited_result_df.iterrows():
                 orig_idx = row["Original_Index"]
                 df.loc[orig_idx, qty_col] = row[qty_col]
@@ -573,7 +574,7 @@ def run():
               st.rerun()
 
           with tab_p4:
-            with st.form("akg_payment_form_v19"):
+            with st.form("akg_payment_form_v20"):
               st.subheader("Add Payment Entry")
               st.text_input(
                   "Vendor Name", value=target_supplier, disabled=True
@@ -652,7 +653,7 @@ def run():
                     "📂 Select Month:",
                     months_list,
                     index=default_m_idx,
-                    key="akg_dropdown_month_v19",
+                    key="akg_dropdown_month_v20",
                 )
               with col_y_sel:
                 current_year = datetime.datetime.now().year
@@ -665,7 +666,7 @@ def run():
                     "📅 Select Year:",
                     years_list,
                     index=default_y_idx,
-                    key="akg_dropdown_year_v19",
+                    key="akg_dropdown_year_v20",
                 )
 
               selected_dropdown_month = (
@@ -786,7 +787,7 @@ def run():
                         "Min_Start": st.column_config.TextColumn("Start Date"),
                         "Max_End": st.column_config.TextColumn("Up-to Date"),
                     },
-                    key="mat_report_active_table_v19",
+                    key="mat_report_active_table_v20",
                 )
 
                 total_month_basic_rent = material_report[
@@ -833,7 +834,7 @@ def run():
                     data=pdf_bytes,
                     file_name=f"AKG_Invoice_{selected_month_name}_{selected_year_val}.pdf",
                     mime="application/pdf",
-                    key="download_pdf_invoice_btn_v19",
+                    key="download_pdf_invoice_btn_v20",
                 )
 
               else:
@@ -843,37 +844,36 @@ def run():
             else:
               st.info("Insufficient data available.")
 
-        st.markdown("---")
-        st.subheader("📦 AKG Shutterings Material Receiving Status")
+          with tab_p6:
+            st.subheader("📦 AKG Shutterings Material Receiving Status")
+            desired_cols = [
+                "S.No",
+                "Store Entry No",
+                "Actualy Recived Date",
+                "Return Date",
+                "Work Order No",
+                "Description Of material",
+                "UOM",
+                qty_col,
+                rate_col,
+                "Rent Basis",
+                "Total Days",
+                "Calculated Months",
+                "basic Rent Value",
+                "CGST (9%)",
+                "SGST (9%)",
+                "Total Rent with 18% Tax",
+            ]
+            existing_cols = [c for c in desired_cols if c and c in sup_invoices.columns]
+            other_cols = [c for c in sup_invoices.columns if c not in existing_cols]
+            ordered_sup_invoices = sup_invoices[existing_cols + other_cols]
 
-        desired_cols = [
-            "S.No",
-            "Store Entry No",
-            "Actualy Recived Date",
-            "Return Date",
-            "Work Order No",
-            "Description Of material",
-            "UOM",
-            qty_col,
-            rate_col,
-            "Rent Basis",
-            "Total Days",
-            "Calculated Months",
-            "basic Rent Value",
-            "CGST (9%)",
-            "SGST (9%)",
-            "Total Rent with 18% Tax",
-        ]
-        existing_cols = [c for c in desired_cols if c and c in sup_invoices.columns]
-        other_cols = [c for c in sup_invoices.columns if c not in existing_cols]
-        ordered_sup_invoices = sup_invoices[existing_cols + other_cols]
-
-        st.dataframe(
-            ordered_sup_invoices,
-            hide_index=True,
-            use_container_width=True,
-            key="akg_inv_table_v19",
-        )
+            st.dataframe(
+                ordered_sup_invoices,
+                hide_index=True,
+                use_container_width=True,
+                key="akg_inv_table_v20",
+            )
 
         st.markdown("---")
         st.subheader(
@@ -885,7 +885,7 @@ def run():
           ledger_upto_date = st.date_input(
               "📅 Select Ledger Up to Date:",
               value=datetime.date.today(),
-              key="ledger_calendar_upto_date_v19",
+              key="ledger_calendar_upto_date_v20",
           )
 
         ledger_upto_ts = pd.to_datetime(ledger_upto_date).normalize()
@@ -958,7 +958,7 @@ def run():
                         "Running Stock At Site", width="small"
                     ),
                 },
-                key="akg_stock_ledger_table_v19",
+                key="akg_stock_ledger_table_v20",
             )
 
             st.markdown("")
@@ -970,7 +970,7 @@ def run():
                 data=stock_pdf_bytes,
                 file_name=f"AKG_Material_Stock_Ledger_Up_To_{ledger_upto_date}.pdf",
                 mime="application/pdf",
-                key="download_stock_ledger_pdf_btn_v19",
+                key="download_stock_ledger_pdf_btn_v20",
             )
           else:
             st.info("No records found up to the selected date.")
@@ -984,7 +984,7 @@ def run():
               sup_payments,
               hide_index=True,
               use_container_width=True,
-              key="akg_pay_table_v19",
+              key="akg_pay_table_v20",
           )
         else:
           st.info("No payment transactions recorded for this vendor yet.")
