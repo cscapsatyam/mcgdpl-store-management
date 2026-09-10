@@ -51,7 +51,7 @@ def generate_akg_pdf_invoice(
       textColor=colors.white,
   )
 
-  elements.append(Paragraph("<b>MOVONE INFRASTRUCTURE PRIVATE LIMITED</b>", title_style))
+  elements.append(Paragraph("<b>Mavone INFRASTRUCTURE PRIVATE LIMITED</b>", title_style))
   elements.append(
       Paragraph(
           f"Rental & Tax Statement — <b>{selected_month_str}</b><br/>"
@@ -153,7 +153,7 @@ def generate_stock_ledger_pdf(stock_df, target_supplier, upto_date_str):
       textColor=colors.white,
   )
 
-  elements.append(Paragraph("<b>MOVONE INFRASTRUCTURE PRIVATE LIMITED</b>", title_style))
+  elements.append(Paragraph("<b>Mavone INFRASTRUCTURE PRIVATE LIMITED</b>", title_style))
   elements.append(
       Paragraph(
           f"Material Stock Ledger Summary (Up to: {upto_date_str})<br/><b>Supplier:</b> {target_supplier}",
@@ -233,7 +233,7 @@ def generate_receiving_status_landscape_pdf(receiving_df, target_supplier):
       textColor=colors.white,
   )
 
-  elements.append(Paragraph("<b>MOVONE INFRASTRUCTURE PRIVATE LIMITED</b>", title_style))
+  elements.append(Paragraph("<b>Mavone INFRASTRUCTURE PRIVATE LIMITED</b>", title_style))
   elements.append(
       Paragraph(f"Material Receiving Status Report — <b>{target_supplier}</b>", sub_style)
   )
@@ -281,7 +281,7 @@ def generate_receiving_status_landscape_pdf(receiving_df, target_supplier):
 
 
 def run():
-  st.title("📑 MOVONE INFRASTRUCTURE PRIVATE LIMITED - Rental, Stock Ledger & Tax")
+  st.title("📑 Mavone INFRASTRUCTURE PRIVATE LIMITED - Rental, Stock Ledger & Tax")
   st.markdown(
       "Exclusive statement breakdown including Store Entry, Return Dates,"
       " Day-wise Rent, Stock Ledger, and 18% Tax Calculation."
@@ -914,7 +914,7 @@ def run():
                 st.download_button(
                     label="📥 Download Active Rent Invoice (PDF)",
                     data=pdf_bytes,
-                    file_name=f"Movone_Invoice_{selected_month_name}_{selected_year_val}.pdf",
+                    file_name=f"Mavone_Invoice_{selected_month_name}_{selected_year_val}.pdf",
                     mime="application/pdf",
                     key="download_pdf_invoice_btn_v23",
                 )
@@ -962,7 +962,7 @@ def run():
             st.download_button(
                 label="📥 Download Material Receiving Status (Landscape PDF)",
                 data=rec_pdf_bytes,
-                file_name="Movone_Material_Receiving_Status_Landscape.pdf",
+                file_name="Mavone_Material_Receiving_Status_Landscape.pdf",
                 mime="application/pdf",
                 key="download_receiving_status_landscape_pdf_v23",
             )
@@ -1057,7 +1057,7 @@ def run():
             st.download_button(
                 label="📥 Download Stock Ledger Summary (PDF)",
                 data=stock_pdf_bytes,
-                file_name=f"Movone_Material_Stock_Ledger_Up_To_{ledger_upto_date}.pdf",
+                file_name=f"Mavone_Material_Stock_Ledger_Up_To_{ledger_upto_date}.pdf",
                 mime="application/pdf",
                 key="download_stock_ledger_pdf_btn_v23",
             )
