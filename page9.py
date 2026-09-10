@@ -298,61 +298,37 @@ def run():
         st.markdown("---")
 
         with st.expander(
-            "✏️ Click Here to Update / Set Bulk Material Rate, Basis, Qty,"
-            " Return Date & Add Payment",
+            "✏️ Click Here to Manage Material Settings & Payments",
             expanded=False,
         ):
-          tab_p1, tab_p2 = st.tabs(
+          tab_p1, tab_p2, tab_p3 = st.tabs(
               [
-                  "⚙️ Bulk Material Master (Rate, Basis, Qty & Return Date)",
+                  "⚙️ Bulk Rate & Basis",
+                  "🔄 Update Return & Qty",
                   "💳 Add Payment",
               ]
           )
 
+          # Tab 1: Bulk Rate & Rent Basis
           with tab_p1:
             with st.form("akg_bulk_rate_form"):
-              st.subheader("Manage Material Bulk Settings")
+              st.subheader("Set Rent Rate & Calculation Basis")
               if mat_desc_col:
                 unique_materials = list(
                     sup_invoices[mat_desc_col].dropna().unique()
                 )
                 if unique_materials:
-                  selected_mat = st.selectbox(
+                  selected_mat_1 = st.selectbox(
                       "Select Material Name / Description:",
                       unique_materials,
-                      key="bulk_mat_select",
+                      key="bulk_mat_select_1",
                   )
 
                   default_bulk_rate = float(
-                      st.session_state.akg_std_rates.get(selected_mat, 0.0)
+                      st.session_state.akg_std_rates.get(selected_mat_1, 0.0)
                   )
                   default_basis = st.session_state.akg_rent_types.get(
-                      selected_mat, "Monthly"
-                  )
-
-                  mat_rows_check = sup_invoices[
-                      sup_invoices[mat_desc_col] == selected_mat
-                  ]
-                  def_qty = (
-                      float(mat_rows_check[qty_col].iloc[0])
-                      if not mat_rows_check.empty
-                      else 1.0
-                  )
-                  if selected_mat in st.session_state.akg_bulk_qtys:
-                    def_qty = st.session_state.akg_bulk_qtys[selected_mat]
-
-                  def_ret = (
-                      mat_rows_check["Return Date"].iloc[0]
-                      if not mat_rows_check.empty
-                      else None
-                  )
-                  if selected_mat in st.session_state.akg_bulk_returns:
-                    def_ret = st.session_state.akg_bulk_returns[selected_mat]
-
-                  default_date = (
-                      pd.to_datetime(def_ret).date()
-                      if pd.notnull(def_ret)
-                      else datetime.date.today()
+                      selected_mat_1, "Monthly"
                   )
 
                   col_b1, col_b2 = st.columns(2)
@@ -363,21 +339,6 @@ def run():
                         min_value=0.0,
                         format="%.2f",
                     )
-                    # Checkbox placed before conditional fields
-                    is_returned_bulk = st.checkbox(
-                        "Has Material Been Returned?",
-                        value=True if pd.notnull(def_ret) else False,
-                    )
-
-                    bulk_qty_val = def_qty
-                    if is_returned_bulk:
-                      bulk_qty_val = st.number_input(
-                          "Quantity Returned for this Material",
-                          value=def_qty,
-                          min_value=0.0,
-                          format="%.2f",
-                      )
-
                   with col_b2:
                     rent_basis_val = st.selectbox(
                         "Rent Calculation Basis:",
@@ -389,27 +350,99 @@ def run():
                         ),
                     )
 
-                    bulk_return_date = None
-                    if is_returned_bulk:
-                      bulk_return_date = st.date_input(
-                          "Material Return Date", value=default_date
-                      )
-
-                  submitted_bulk = st.form_submit_button(
-                      "Apply All Settings to This Material Across All Entries"
+                  submitted_bulk_1 = st.form_submit_button(
+                      "Apply Rate & Basis"
                   )
-                  if submitted_bulk:
-                    final_ret_val = (
-                        str(bulk_return_date) if is_returned_bulk else None
+                  if submitted_bulk_1:
+                    st.session_state.akg_std_rates[selected_mat_1] = (
+                        bulk_rate_val
                     )
-                    final_qty_val = bulk_qty_val if is_returned_bulk else def_qty
-
-                    st.session_state.akg_std_rates[selected_mat] = bulk_rate_val
-                    st.session_state.akg_rent_types[selected_mat] = (
+                    st.session_state.akg_rent_types[selected_mat_1] = (
                         rent_basis_val
                     )
-                    st.session_state.akg_bulk_qtys[selected_mat] = final_qty_val
-                    st.session_state.akg_bulk_returns[selected_mat] = (
+
+                    if "Return Date" not in df.columns:
+                      df["Return Date"] = None
+                    df.loc[
+                        (df[sup_col] == target_supplier)
+                        & (df[mat_desc_col] == selected_mat_1),
+                        rate_col,
+                    ] = bulk_rate_val
+
+                    st.session_state.current_df = df
+                    st.success(
+                        f"Rate & Basis updated for '{selected_mat_1}'"
+                        " successfully!"
+                    )
+                    st.rerun()
+                else:
+                  st.warning("No materials found.")
+              else:
+                st.warning("Material description column not available.")
+
+          # Tab 2: Update Return Date & Qty (Separate Tab)
+          with tab_p2:
+            with st.form("akg_return_qty_form"):
+              st.subheader("Update Material Return & Quantity")
+              if mat_desc_col:
+                unique_materials = list(
+                    sup_invoices[mat_desc_col].dropna().unique()
+                )
+                if unique_materials:
+                  selected_mat_2 = st.selectbox(
+                      "Select Material Name / Description:",
+                      unique_materials,
+                      key="bulk_mat_select_2",
+                  )
+
+                  mat_rows_check = sup_invoices[
+                      sup_invoices[mat_desc_col] == selected_mat_2
+                  ]
+                  def_qty = (
+                      float(mat_rows_check[qty_col].iloc[0])
+                      if not mat_rows_check.empty
+                      else 1.0
+                  )
+                  if selected_mat_2 in st.session_state.akg_bulk_qtys:
+                    def_qty = st.session_state.akg_bulk_qtys[selected_mat_2]
+
+                  def_ret = (
+                      mat_rows_check["Return Date"].iloc[0]
+                      if not mat_rows_check.empty
+                      else None
+                  )
+                  if selected_mat_2 in st.session_state.akg_bulk_returns:
+                    def_ret = st.session_state.akg_bulk_returns[selected_mat_2]
+
+                  default_date = (
+                      pd.to_datetime(def_ret).date()
+                      if pd.notnull(def_ret)
+                      else datetime.date.today()
+                  )
+
+                  col_r1, col_r2 = st.columns(2)
+                  with col_r1:
+                    bulk_qty_val = st.number_input(
+                        "Quantity Returned for this Material",
+                        value=def_qty,
+                        min_value=0.0,
+                        format="%.2f",
+                    )
+                  with col_r2:
+                    bulk_return_date = st.date_input(
+                        "Material Return Date", value=default_date
+                    )
+
+                  submitted_bulk_2 = st.form_submit_button(
+                      "Save Return Details"
+                  )
+                  if submitted_bulk_2:
+                    final_ret_val = str(bulk_return_date)
+
+                    st.session_state.akg_bulk_qtys[selected_mat_2] = (
+                        bulk_qty_val
+                    )
+                    st.session_state.akg_bulk_returns[selected_mat_2] = (
                         final_ret_val
                     )
 
@@ -418,23 +451,19 @@ def run():
 
                     df.loc[
                         (df[sup_col] == target_supplier)
-                        & (df[mat_desc_col] == selected_mat),
+                        & (df[mat_desc_col] == selected_mat_2),
                         qty_col,
-                    ] = final_qty_val
+                    ] = bulk_qty_val
                     df.loc[
                         (df[sup_col] == target_supplier)
-                        & (df[mat_desc_col] == selected_mat),
-                        rate_col,
-                    ] = bulk_rate_val
-                    df.loc[
-                        (df[sup_col] == target_supplier)
-                        & (df[mat_desc_col] == selected_mat),
+                        & (df[mat_desc_col] == selected_mat_2),
                         "Return Date",
                     ] = final_ret_val
 
                     st.session_state.current_df = df
                     st.success(
-                        f"Updated settings for '{selected_mat}' successfully!"
+                        f"Return details updated for '{selected_mat_2}'"
+                        " successfully!"
                     )
                     st.rerun()
                 else:
@@ -442,7 +471,8 @@ def run():
               else:
                 st.warning("Material description column not available.")
 
-          with tab_p2:
+          # Tab 3: Add Payment
+          with tab_p3:
             with st.form("akg_payment_form"):
               st.subheader("Add Payment Entry")
               st.text_input(
