@@ -4,7 +4,11 @@ import streamlit as st
 
 
 def run():
-  st.subheader("📦 AKG Shutterings Material Receiving Status")
+  st.title("📑 AKG SHUTTERINGS PRIVATE LIMITED - Rental, Stock Ledger & Tax")
+  st.markdown(
+      "Exclusive statement breakdown including Store Entry, Return Dates,"
+      " Monthly Stock Rent, Stock Ledger, and 18% Tax Calculation."
+  )
 
   if "current_df" in st.session_state and not st.session_state.current_df.empty:
     df = st.session_state.current_df.copy()
@@ -20,6 +24,10 @@ def run():
         sup_invoices["Return Date"] = None
       if "Return Date" not in df.columns:
         df["Return Date"] = None
+
+      # Initialize session state for standard/bulk material rates if not exists
+      if "akg_std_rates" not in st.session_state:
+        st.session_state.akg_std_rates = {}
 
       if not sup_invoices.empty:
         date_col = (
@@ -53,11 +61,70 @@ def run():
         else:
           filtered_sup_invoices = sup_invoices.copy()
 
+        possible_qty_cols = ["Qty", "Quantity", "Nos", "Receiving Qty"]
+        possible_rate_cols = ["Rate", "Unit Rate", "Rent Rate"]
+
+        qty_col = next(
+            (
+                c
+                for c in possible_qty_cols
+                if c in filtered_sup_invoices.columns
+            ),
+            "Qty",
+        )
+        rate_col = next(
+            (
+                c
+                for c in possible_rate_cols
+                if c in filtered_sup_invoices.columns
+            ),
+            "Rate",
+        )
+        mat_desc_col = next(
+            (
+                c
+                for c in [
+                    "Description Of material",
+                    "Material Name",
+                    "Item Description",
+                ]
+                if c in filtered_sup_invoices.columns
+            ),
+            None,
+        )
+
+        # Apply Standard/Bulk rates if set
+        if mat_desc_col and st.session_state.akg_std_rates:
+          for mat_name, std_rate in st.session_state.akg_std_rates.items():
+            filtered_sup_invoices.loc[
+                filtered_sup_invoices[mat_desc_col] == mat_name, rate_col
+            ] = std_rate
+            sup_invoices.loc[sup_invoices[mat_desc_col] == mat_name, rate_col] = (
+                std_rate
+            )
+
+        if qty_col not in filtered_sup_invoices.columns:
+          filtered_sup_invoices[qty_col] = 1.0
+        if rate_col not in filtered_sup_invoices.columns:
+          filtered_sup_invoices[rate_col] = 0.0
+
+        filtered_sup_invoices[qty_col] = pd.to_numeric(
+            filtered_sup_invoices[qty_col]
+            .astype(str)
+            .str.replace(r"[^\d.]", "", regex=True),
+            errors="coerce",
+        ).fillna(0)
+        filtered_sup_invoices[rate_col] = pd.to_numeric(
+            filtered_sup_invoices[rate_col]
+            .astype(str)
+            .str.replace(r"[^\d.]", "", regex=True),
+            errors="coerce",
+        ).fillna(0)
+
         if "Actualy Recived Date" in filtered_sup_invoices.columns:
           filtered_sup_invoices["Actualy Recived Date DT"] = pd.to_datetime(
               filtered_sup_invoices["Actualy Recived Date"], errors="coerce"
           )
-
           filtered_sup_invoices["Return Date DT"] = pd.to_datetime(
               filtered_sup_invoices["Return Date"], errors="coerce"
           )
@@ -79,44 +146,6 @@ def run():
           filtered_sup_invoices["Calculated Months"] = (
               filtered_sup_invoices["Total Days"] / 30.0
           ).round(2)
-
-        possible_qty_cols = ["Qty", "Quantity", "Nos", "Receiving Qty"]
-        possible_rate_cols = ["Rate", "Unit Rate", "Rent Rate"]
-
-        qty_col = next(
-            (
-                c
-                for c in possible_qty_cols
-                if c in filtered_sup_invoices.columns
-            ),
-            "Qty",
-        )
-        rate_col = next(
-            (
-                c
-                for c in possible_rate_cols
-                if c in filtered_sup_invoices.columns
-            ),
-            "Rate",
-        )
-
-        if qty_col not in filtered_sup_invoices.columns:
-          filtered_sup_invoices[qty_col] = 1.0
-        if rate_col not in filtered_sup_invoices.columns:
-          filtered_sup_invoices[rate_col] = 0.0
-
-        filtered_sup_invoices[qty_col] = pd.to_numeric(
-            filtered_sup_invoices[qty_col]
-            .astype(str)
-            .str.replace(r"[^\d.]", "", regex=True),
-            errors="coerce",
-        ).fillna(0)
-        filtered_sup_invoices[rate_col] = pd.to_numeric(
-            filtered_sup_invoices[rate_col]
-            .astype(str)
-            .str.replace(r"[^\d.]", "", regex=True),
-            errors="coerce",
-        ).fillna(0)
 
         filtered_sup_invoices["Base Rent Value"] = (
             filtered_sup_invoices[qty_col]
@@ -228,16 +257,21 @@ def run():
         st.markdown("---")
 
         with st.expander(
-            "✏️ Click Here to Update Return Date, Qty & Rates / Add Payment",
+            "✏️ Click Here to Update Return Date, Qty & Rates / Set Bulk"
+            " Material Rate / Add Payment",
             expanded=False,
         ):
-          tab_p1, tab_p2 = st.tabs(
-              ["📦 Update Material & Return", "💳 Add Payment"]
+          tab_p1, tab_p2, tab_p3 = st.tabs(
+              [
+                  "📦 Update Single Entry",
+                  "⚙️ Bulk Material Rate Master",
+                  "💳 Add Payment",
+              ]
           )
 
           with tab_p1:
             with st.form("akg_rent_form"):
-              st.subheader("Update Material Return Date, Qty & Rate")
+              st.subheader("Update Individual Store Entry Return Date, Qty & Rate")
               entry_col_name = (
                   "Store Entry No"
                   if "Store Entry No" in sup_invoices.columns
@@ -317,6 +351,45 @@ def run():
                 st.warning("No store entries found.")
 
           with tab_p2:
+            with st.form("akg_bulk_rate_form"):
+              st.subheader(
+                  "Set Same Rent Rate for Specific Material (Applies to All"
+                  " Entries)"
+              )
+              if mat_desc_col:
+                unique_materials = list(
+                    sup_invoices[mat_desc_col].dropna().unique()
+                )
+                if unique_materials:
+                  selected_mat = st.selectbox(
+                      "Select Material Name / Description:", unique_materials
+                  )
+                  default_bulk_rate = float(
+                      st.session_state.akg_std_rates.get(selected_mat, 0.0)
+                  )
+                  bulk_rate_val = st.number_input(
+                      "Standard Monthly Rent Rate for this Material (₹)",
+                      value=default_bulk_rate,
+                      min_value=0.0,
+                      format="%.2f",
+                  )
+
+                  submitted_bulk = st.form_submit_button(
+                      "Apply Same Rate to All Entries of this Material"
+                  )
+                  if submitted_bulk:
+                    st.session_state.akg_std_rates[selected_mat] = bulk_rate_val
+                    st.success(
+                        f"Standard rate ₹{bulk_rate_val} set for '{selected_mat}'"
+                        " successfully!"
+                    )
+                    st.rerun()
+                else:
+                  st.warning("No materials found.")
+              else:
+                st.warning("Material description column not available.")
+
+          with tab_p3:
             with st.form("akg_payment_form"):
               st.subheader("Add Payment Entry")
               st.text_input(
@@ -361,9 +434,7 @@ def run():
                 st.rerun()
 
         st.markdown("---")
-        st.subheader(
-            "📂  AKG Shutterings Material Receiving Status"
-        )
+        st.subheader("📦 AKG Shutterings Material Receiving Status")
 
         desired_cols = [
             "S.No",
@@ -404,20 +475,8 @@ def run():
 
         st.markdown("---")
         st.subheader(
-            "📦 Material Stock Ledger "
-        )
-
-        mat_desc_col = next(
-            (
-                c
-                for c in [
-                    "Description Of material",
-                    "Material Name",
-                    "Item Description",
-                ]
-                if c in sup_invoices.columns
-            ),
-            None,
+            "📦 Material Stock Ledger Summary (All Months / Cumulative Up to"
+            " Date)"
         )
 
         if mat_desc_col:
