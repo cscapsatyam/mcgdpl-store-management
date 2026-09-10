@@ -9,7 +9,7 @@ import streamlit as st
 
 
 def generate_akg_pdf_invoice(
-    report_df, selected_month_str, target_supplier, total_base, total_with_tax
+    report_df, selected_month_str, target_supplier, total_basic, total_with_tax
 ):
   buffer = io.BytesIO()
   doc = SimpleDocTemplate(
@@ -56,9 +56,9 @@ def generate_akg_pdf_invoice(
   table_data = [[
       Paragraph("S.No", header_style),
       Paragraph("Material Description", header_style),
-      Paragraph("Base Rate (₹)", header_style),
+      Paragraph("basic Rate (₹)", header_style),
       Paragraph("Total Qty", header_style),
-      Paragraph("Base Rent (₹)", header_style),
+      Paragraph("basic Rent (₹)", header_style),
       Paragraph("Total + 18% Tax (₹)", header_style),
   ]]
 
@@ -66,9 +66,9 @@ def generate_akg_pdf_invoice(
     table_data.append([
         Paragraph(str(row.get("S.No", "")), cell_style),
         Paragraph(str(row.get("Description Of material", "")), cell_style),
-        Paragraph(f"{row.get('Base_Rate', 0):,.2f}", cell_style),
+        Paragraph(f"{row.get('basic_Rate', 0):,.2f}", cell_style),
         Paragraph(str(row.get("Total_Qty", 0)), cell_style),
-        Paragraph(f"{row.get('Base_Rent_Value', 0):,.2f}", cell_style),
+        Paragraph(f"{row.get('basic_Rent_Value', 0):,.2f}", cell_style),
         Paragraph(f"{row.get('Total_Tax_18', 0):,.2f}", cell_style),
     ])
 
@@ -95,7 +95,7 @@ def generate_akg_pdf_invoice(
   )
   elements.append(
       Paragraph(
-          f"Total Base Rent (Without Tax): ₹ {total_base:,.2f}", summary_style
+          f"Total basic Rent (Without Tax): ₹ {total_basic:,.2f}", summary_style
       )
   )
   elements.append(
@@ -245,7 +245,7 @@ def run():
 
         sup_invoices["Rent Basis"] = sup_invoices.apply(get_rent_basis, axis=1)
 
-        def calc_base_rent(row):
+        def calc_basic_rent(row):
           qty = row[qty_col]
           rate = row[rate_col]
           if row["Rent Basis"] == "Day-wise":
@@ -254,17 +254,17 @@ def run():
           else:
             return round(qty * rate, 2)
 
-        sup_invoices["Base Rent Value"] = sup_invoices.apply(
-            calc_base_rent, axis=1
+        sup_invoices["basic Rent Value"] = sup_invoices.apply(
+            calc_basic_rent, axis=1
         )
         sup_invoices["CGST (9%)"] = (
-            sup_invoices["Base Rent Value"] * 0.09
+            sup_invoices["basic Rent Value"] * 0.09
         ).round(2)
         sup_invoices["SGST (9%)"] = (
-            sup_invoices["Base Rent Value"] * 0.09
+            sup_invoices["basic Rent Value"] * 0.09
         ).round(2)
         sup_invoices["Total Rent with 18% Tax"] = (
-            sup_invoices["Base Rent Value"]
+            sup_invoices["basic Rent Value"]
             + sup_invoices["CGST (9%)"]
             + sup_invoices["SGST (9%)"]
         ).round(2)
@@ -649,13 +649,13 @@ def run():
                   else:
                     active_billing_days = max(days_in_month_overlap, 0)
 
-                  month_base_rent = round(qty * rate * active_billing_days, 2)
+                  month_basic_rent = round(qty * rate * active_billing_days, 2)
                 else:
-                  month_base_rent = round(qty * rate, 2)
+                  month_basic_rent = round(qty * rate, 2)
 
                 row_copy = row.copy()
-                row_copy["Month_Base_Rent"] = month_base_rent
-                row_copy["Month_Tax_18"] = round(month_base_rent * 1.18, 2)
+                row_copy["Month_basic_Rent"] = month_basic_rent
+                row_copy["Month_Tax_18"] = round(month_basic_rent * 1.18, 2)
                 active_rows.append(row_copy)
 
           if active_rows:
@@ -663,17 +663,17 @@ def run():
             material_report = (
                 month_sub_df.groupby(mat_desc_col)
                 .agg(
-                    Base_Rate=(rate_col, "first"),
+                    basic_Rate=(rate_col, "first"),
                     Total_Qty=(qty_col, "sum"),
-                    Base_Rent_Value=("Month_Base_Rent", "sum"),
+                    basic_Rent_Value=("Month_basic_Rent", "sum"),
                     Total_Tax_18=("Month_Tax_18", "sum"),
                 )
                 .reset_index()
             )
 
-            material_report["Base_Rate"] = material_report["Base_Rate"].round(2)
-            material_report["Base_Rent_Value"] = material_report[
-                "Base_Rent_Value"
+            material_report["basic_Rate"] = material_report["basic_Rate"].round(2)
+            material_report["basic_Rent_Value"] = material_report[
+                "basic_Rent_Value"
             ].round(2)
             material_report["Total_Tax_18"] = material_report[
                 "Total_Tax_18"
@@ -695,14 +695,14 @@ def run():
                     mat_desc_col: st.column_config.TextColumn(
                         "Material Description", width="large"
                     ),
-                    "Base_Rate": st.column_config.NumberColumn(
-                        "Base Rate (₹)", format="₹ %.2f", width="medium"
+                    "basic_Rate": st.column_config.NumberColumn(
+                        "basic Rate (₹)", format="₹ %.2f", width="medium"
                     ),
                     "Total_Qty": st.column_config.NumberColumn(
                         "Total Qty", width="small"
                     ),
-                    "Base_Rent_Value": st.column_config.NumberColumn(
-                        "Base Rent (₹)", format="₹ %.2f", width="medium"
+                    "basic_Rent_Value": st.column_config.NumberColumn(
+                        "basic Rent (₹)", format="₹ %.2f", width="medium"
                     ),
                     "Total_Tax_18": st.column_config.NumberColumn(
                         "Total + 18% Tax (₹)",
@@ -713,7 +713,7 @@ def run():
                 key="mat_report_active_table_v15",
             )
 
-            total_month_base_rent = material_report["Base_Rent_Value"].sum()
+            total_month_basic_rent = material_report["basic_Rent_Value"].sum()
             total_month_tax_rent = material_report["Total_Tax_18"].sum()
 
             st.markdown(
@@ -721,8 +721,8 @@ def run():
             )
             col_tot1, col_tot2 = st.columns(2)
             col_tot1.metric(
-                "Total Base Rent (Without Tax)",
-                f"₹ {total_month_base_rent:,.2f}",
+                "Total basic Rent (Without Tax)",
+                f"₹ {total_month_basic_rent:,.2f}",
             )
             col_tot2.metric(
                 "Total Rent Value (With 18% Tax)",
@@ -735,7 +735,7 @@ def run():
                 material_report,
                 selected_dropdown_month,
                 target_supplier,
-                total_month_base_rent,
+                total_month_basic_rent,
                 total_month_tax_rent,
             )
             st.download_button(
@@ -769,7 +769,7 @@ def run():
             "Rent Basis",
             "Total Days",
             "Calculated Months",
-            "Base Rent Value",
+            "basic Rent Value",
             "CGST (9%)",
             "SGST (9%)",
             "Total Rent with 18% Tax",
