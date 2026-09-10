@@ -161,26 +161,27 @@ def generate_stock_ledger_pdf(stock_df, target_supplier, upto_date_str):
       )
   )
 
+  # First Received Date తొలగించబడింది
   table_data = [[
       Paragraph("S.No", header_style),
       Paragraph("Material Description", header_style),
-      Paragraph("First Received Date", header_style),
       Paragraph("Total Received Qty", header_style),
       Paragraph("Returned Qty", header_style),
       Paragraph("Running Stock At Site", header_style),
+      Paragraph("Up-to Date", header_style),
   ]]
 
   for _, row in stock_df.iterrows():
     table_data.append([
         Paragraph(str(row.get("S.No", "")), cell_style),
         Paragraph(str(row.get("Description Of material", "")), cell_style),
-        Paragraph(str(row.get("First_Received_Date", "")), cell_style),
         Paragraph(str(row.get("Total_Received_Qty", 0)), cell_style),
         Paragraph(str(row.get("Returned_Qty", 0)), cell_style),
         Paragraph(str(row.get("Running Stock At Site", 0)), cell_style),
+        Paragraph(str(upto_date_str), cell_style),
     ])
 
-  t = Table(table_data, colWidths=[35, 195, 85, 75, 75, 75])
+  t = Table(table_data, colWidths=[35, 230, 85, 80, 90, 85])
   t.setStyle(
       TableStyle([
           ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#1f2937")),
@@ -200,7 +201,6 @@ def generate_stock_ledger_pdf(stock_df, target_supplier, upto_date_str):
 
 def generate_receiving_status_landscape_pdf(receiving_df, target_supplier):
   buffer = io.BytesIO()
-  # Landscape orientation కోసం landscape(letter) వాడటం జరిగింది
   doc = SimpleDocTemplate(
       buffer, pagesize=landscape(letter), rightMargin=30, leftMargin=30, topMargin=30, bottomMargin=30
   )
@@ -239,7 +239,6 @@ def generate_receiving_status_landscape_pdf(receiving_df, target_supplier):
       Paragraph(f"Material Receiving Status Report — <b>{target_supplier}</b>", sub_style)
   )
 
-  # టేబుల్ హెడర్స్ తయారీ
   columns_to_show = [
       "S.No",
       "Store Entry No",
@@ -262,7 +261,6 @@ def generate_receiving_status_landscape_pdf(receiving_df, target_supplier):
     row_data = [Paragraph(str(row.get(col, "")), cell_style) for col in active_cols]
     table_data.append(row_data)
 
-  # Landscape width కి తగినట్లుగా కాలమ్ విడ్త్స్ సెట్ చేయడం (Total width ~ 730)
   col_widths = [30, 65, 75, 75, 150, 40, 45, 55, 55, 70, 75][:len(active_cols)]
   
   t = Table(table_data, colWidths=col_widths)
@@ -488,7 +486,7 @@ def run():
           )
 
           with tab_p1:
-            with st.form("akg_bulk_rate_form_v21"):
+            with st.form("akg_bulk_rate_form_v22"):
               st.subheader("Set Rent Rate (Day-wise Basis)")
               if mat_desc_col:
                 unique_materials = list(
@@ -498,7 +496,7 @@ def run():
                   selected_mat_1 = st.selectbox(
                       "Select Material Name / Description:",
                       unique_materials,
-                      key="bulk_mat_select_1_v21",
+                      key="bulk_mat_select_1_v22",
                   )
 
                   default_bulk_rate = float(
@@ -537,7 +535,7 @@ def run():
                 st.warning("Material description column not available.")
 
           with tab_p2:
-            with st.form("akg_return_qty_form_v21"):
+            with st.form("akg_return_qty_form_v22"):
               st.subheader("Update Material Return & Quantity")
               if mat_desc_col:
                 unique_materials = list(
@@ -547,7 +545,7 @@ def run():
                   selected_mat_2 = st.selectbox(
                       "Select Material Name / Description:",
                       unique_materials,
-                      key="bulk_mat_select_2_v21",
+                      key="bulk_mat_select_2_v22",
                   )
 
                   mat_rows_check = sup_invoices[
@@ -644,10 +642,10 @@ def run():
                 editable_df,
                 hide_index=True,
                 use_container_width=True,
-                key="specific_material_data_editor_v21",
+                key="specific_material_data_editor_v22",
             )
 
-            if st.button("Save Modifications", key="save_mod_btn_v21"):
+            if st.button("Save Modifications", key="save_mod_btn_v22"):
               for idx, row in edited_result_df.iterrows():
                 orig_idx = row["Original_Index"]
                 df.loc[orig_idx, qty_col] = row[qty_col]
@@ -659,7 +657,7 @@ def run():
               st.rerun()
 
           with tab_p4:
-            with st.form("akg_payment_form_v21"):
+            with st.form("akg_payment_form_v22"):
               st.subheader("Add Payment Entry")
               st.text_input(
                   "Vendor Name", value=target_supplier, disabled=True
@@ -738,7 +736,7 @@ def run():
                     "📂 Select Month:",
                     months_list,
                     index=default_m_idx,
-                    key="akg_dropdown_month_v21",
+                    key="akg_dropdown_month_v22",
                 )
               with col_y_sel:
                 current_year = datetime.datetime.now().year
@@ -751,7 +749,7 @@ def run():
                     "📅 Select Year:",
                     years_list,
                     index=default_y_idx,
-                    key="akg_dropdown_year_v21",
+                    key="akg_dropdown_year_v22",
                 )
 
               selected_dropdown_month = (
@@ -872,7 +870,7 @@ def run():
                         "Min_Start": st.column_config.TextColumn("Start Date"),
                         "Max_End": st.column_config.TextColumn("Up-to Date"),
                     },
-                    key="mat_report_active_table_v21",
+                    key="mat_report_active_table_v22",
                 )
 
                 total_month_basic_rent = material_report[
@@ -919,7 +917,7 @@ def run():
                     data=pdf_bytes,
                     file_name=f"AKG_Invoice_{selected_month_name}_{selected_year_val}.pdf",
                     mime="application/pdf",
-                    key="download_pdf_invoice_btn_v21",
+                    key="download_pdf_invoice_btn_v22",
                 )
 
               else:
@@ -957,18 +955,17 @@ def run():
                 ordered_sup_invoices,
                 hide_index=True,
                 use_container_width=True,
-                key="akg_inv_table_v21",
+                key="akg_inv_table_v22",
             )
 
             st.markdown("")
-            # మెటీరియల్ రిసీవింగ్ స్టేటస్ కోసం హారిజాంటల్ (Landscape) PDF డౌన్‌లోడ్ బటన్
             rec_pdf_bytes = generate_receiving_status_landscape_pdf(ordered_sup_invoices, target_supplier)
             st.download_button(
                 label="📥 Download Material Receiving Status (Landscape PDF)",
                 data=rec_pdf_bytes,
                 file_name="AKG_Material_Receiving_Status_Landscape.pdf",
                 mime="application/pdf",
-                key="download_receiving_status_landscape_pdf_v21",
+                key="download_receiving_status_landscape_pdf_v22",
             )
 
         st.markdown("---")
@@ -981,7 +978,7 @@ def run():
           ledger_upto_date = st.date_input(
               "📅 Select Ledger Up to Date:",
               value=datetime.date.today(),
-              key="ledger_calendar_upto_date_v21",
+              key="ledger_calendar_upto_date_v22",
           )
 
         ledger_upto_ts = pd.to_datetime(ledger_upto_date).normalize()
@@ -1001,10 +998,10 @@ def run():
                 "Return Date"
             ].notnull()
 
+            # First_Received_Date తీసివేయబడింది, అవసరం లేదు కాబట్టి గ్రూపింగ్ నుండి తొలగించాం
             stock_summary = (
                 filtered_stock_df.groupby(mat_desc_col)
                 .agg(
-                    First_Received_Date=("Parsed_Recv_Date", "min"),
                     Total_Received_Qty=(qty_col, "sum"),
                     Returned_Qty=(
                         qty_col,
@@ -1016,14 +1013,13 @@ def run():
                 .reset_index()
             )
 
-            stock_summary["First_Received_Date"] = pd.to_datetime(
-                stock_summary["First_Received_Date"]
-            ).dt.strftime("%d-%m-%Y")
-
             stock_summary["Running Stock At Site"] = (
                 stock_summary["Total_Received_Qty"]
                 - stock_summary["Returned_Qty"]
             )
+            
+            # స్క్రీన్ మీద కూడా 'Up-to Date' కాలమ్ కనిపించడానికి డేటా యాడ్ చేయడం
+            stock_summary["Up-to Date"] = ledger_upto_date.strftime("%d-%m-%Y")
 
             if "S.No" in stock_summary.columns:
               stock_summary["S.No"] = range(1, len(stock_summary) + 1)
@@ -1041,9 +1037,6 @@ def run():
                     mat_desc_col: st.column_config.TextColumn(
                         "Material Description", width="large"
                     ),
-                    "First_Received_Date": st.column_config.TextColumn(
-                        "First Received Date", width="medium"
-                    ),
                     "Total_Received_Qty": st.column_config.NumberColumn(
                         "Total Received Qty", width="small"
                     ),
@@ -1053,8 +1046,11 @@ def run():
                     "Running Stock At Site": st.column_config.NumberColumn(
                         "Running Stock At Site", width="small"
                     ),
+                    "Up-to Date": st.column_config.TextColumn(
+                        "Up-to Date", width="medium"
+                    ),
                 },
-                key="akg_stock_ledger_table_v21",
+                key="akg_stock_ledger_table_v22",
             )
 
             st.markdown("")
@@ -1066,7 +1062,7 @@ def run():
                 data=stock_pdf_bytes,
                 file_name=f"AKG_Material_Stock_Ledger_Up_To_{ledger_upto_date}.pdf",
                 mime="application/pdf",
-                key="download_stock_ledger_pdf_btn_v21",
+                key="download_stock_ledger_pdf_btn_v22",
             )
           else:
             st.info("No records found up to the selected date.")
@@ -1080,7 +1076,7 @@ def run():
               sup_payments,
               hide_index=True,
               use_container_width=True,
-              key="akg_pay_table_v21",
+              key="akg_pay_table_v22",
           )
         else:
           st.info("No payment transactions recorded for this vendor yet.")
