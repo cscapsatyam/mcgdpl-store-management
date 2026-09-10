@@ -161,7 +161,11 @@ def run():
             + sup_invoices["SGST (9%)"]
         ).round(2)
 
-        sup_invoices.insert(0, "S.No", range(1, len(sup_invoices) + 1))
+        # S.No సరిగ్గా అసైన్ చేయడానికి (ఎర్రర్ రాకుండా)
+        if "S.No" in sup_invoices.columns:
+          sup_invoices["S.No"] = range(1, len(sup_invoices) + 1)
+        else:
+          sup_invoices.insert(0, "S.No", range(1, len(sup_invoices) + 1))
 
         total_inv_amt = sup_invoices["Total Rent with 18% Tax"].sum()
 
@@ -178,7 +182,10 @@ def run():
               .reset_index(drop=True)
           )
           if not sup_payments.empty:
-            sup_payments.insert(0, "S.No", range(1, len(sup_payments) + 1))
+            if "S.No" in sup_payments.columns:
+              sup_payments["S.No"] = range(1, len(sup_payments) + 1)
+            else:
+              sup_payments.insert(0, "S.No", range(1, len(sup_payments) + 1))
             total_paid_amt = sup_payments["Paid Amount"].sum()
           else:
             total_paid_amt = 0.0
@@ -211,7 +218,7 @@ def run():
           )
 
           with tab_p1:
-            with st.form("akg_bulk_rate_form_v3"):
+            with st.form("akg_bulk_rate_form_v4"):
               st.subheader("Set Rent Rate & Calculation Basis")
               if mat_desc_col:
                 unique_materials = list(
@@ -221,7 +228,7 @@ def run():
                   selected_mat_1 = st.selectbox(
                       "Select Material Name / Description:",
                       unique_materials,
-                      key="bulk_mat_select_1_v3",
+                      key="bulk_mat_select_1_v4",
                   )
 
                   default_bulk_rate = float(
@@ -281,7 +288,7 @@ def run():
                 st.warning("Material description column not available.")
 
           with tab_p2:
-            with st.form("akg_return_qty_form_v3"):
+            with st.form("akg_return_qty_form_v4"):
               st.subheader("Update Material Return & Quantity")
               if mat_desc_col:
                 unique_materials = list(
@@ -291,7 +298,7 @@ def run():
                   selected_mat_2 = st.selectbox(
                       "Select Material Name / Description:",
                       unique_materials,
-                      key="bulk_mat_select_2_v3",
+                      key="bulk_mat_select_2_v4",
                   )
 
                   mat_rows_check = sup_invoices[
@@ -388,10 +395,10 @@ def run():
                 editable_df,
                 hide_index=True,
                 use_container_width=True,
-                key="specific_material_data_editor_v3",
+                key="specific_material_data_editor_v4",
             )
 
-            if st.button("Save Modifications", key="save_mod_btn_v3"):
+            if st.button("Save Modifications", key="save_mod_btn_v4"):
               for idx, row in edited_result_df.iterrows():
                 orig_idx = row["Original_Index"]
                 df.loc[orig_idx, qty_col] = row[qty_col]
@@ -403,7 +410,7 @@ def run():
               st.rerun()
 
           with tab_p4:
-            with st.form("akg_payment_form_v3"):
+            with st.form("akg_payment_form_v4"):
               st.subheader("Add Payment Entry")
               st.text_input(
                   "Vendor Name", value=target_supplier, disabled=True
@@ -454,7 +461,6 @@ def run():
             and mat_desc_col
             and not sup_invoices.empty
         ):
-          # మెటీరియల్ సైట్‌లో ఉన్న ప్రతి నెలా (रिसीవ్ అయిన నెల నుండి రిటర్న్/ప్రస్తుత నెల వరకు) లిస్ట్ తయారు చేయడం
           all_months_set = []
           for idx, row in sup_invoices.iterrows():
             rec_dt = pd.to_datetime(
@@ -471,14 +477,12 @@ def run():
                 m_str = curr.strftime("%B %Y")
                 if m_str not in all_months_set:
                   all_months_set.append(m_str)
-                # Next month
                 if curr.month == 12:
                   curr = curr.replace(year=curr.year + 1, month=1)
                 else:
                   curr = curr.replace(month=curr.month + 1)
 
           if not all_months_set:
-            # Fallback 2025-2026 months
             all_months_set = [
                 f"{m} {y}"
                 for y in [2025, 2026]
@@ -503,14 +507,13 @@ def run():
             selected_dropdown_month = st.selectbox(
                 "📂 Select Month (Active Materials Breakdown):",
                 all_months_set,
-                key="akg_material_dropdown_active_months",
+                key="akg_material_dropdown_active_months_v4",
             )
 
           st.markdown(
               f"### Material-wise Active Rent for **{selected_dropdown_month}**"
           )
 
-          # ఆ నిర్దిష్ట నెలలో సైట్‌లో యాక్టివ్‌గా ఉన్న (రిసీవ్ అయి, ఇంకా రిటర్న్ కాని లేదా ఆ నెలలో ఉండిన) మెటీరియల్స్ ఫిల్టర్ చేయడం
           sel_m_dt = pd.to_datetime(selected_dropdown_month, format="%B %Y")
 
           active_rows = []
@@ -551,16 +554,20 @@ def run():
             material_report["Total_Tax_18"] = material_report[
                 "Total_Tax_18"
             ].round(2)
-            material_report.insert(
-                0, "S.No", range(1, len(material_report) + 1)
-            )
+
+            if "S.No" in material_report.columns:
+              material_report["S.No"] = range(1, len(material_report) + 1)
+            else:
+              material_report.insert(
+                  0, "S.No", range(1, len(material_report) + 1)
+              )
 
             st.data_editor(
                 material_report,
                 hide_index=True,
                 use_container_width=True,
                 disabled=True,
-                key="mat_report_active_table",
+                key="mat_report_active_table_v4",
             )
           else:
             st.info(
@@ -600,7 +607,7 @@ def run():
             hide_index=True,
             use_container_width=True,
             disabled=True,
-            key="akg_inv_table_v3",
+            key="akg_inv_table_v4",
         )
 
         st.markdown("---")
@@ -632,14 +639,18 @@ def run():
               stock_summary["Total_Received_Qty"]
               - stock_summary["Returned_Qty"]
           )
-          stock_summary.insert(0, "S.No", range(1, len(stock_summary) + 1))
+
+          if "S.No" in stock_summary.columns:
+            stock_summary["S.No"] = range(1, len(stock_summary) + 1)
+          else:
+            stock_summary.insert(0, "S.No", range(1, len(stock_summary) + 1))
 
           st.data_editor(
               stock_summary,
               hide_index=True,
               use_container_width=True,
               disabled=True,
-              key="akg_stock_ledger_table_v3",
+              key="akg_stock_ledger_table_v4",
           )
         else:
           st.info("Material description column not found for stock ledger.")
@@ -652,7 +663,7 @@ def run():
               hide_index=True,
               use_container_width=True,
               disabled=True,
-              key="akg_pay_table_v3",
+              key="akg_pay_table_v4",
           )
         else:
           st.info("No payment transactions recorded for this vendor yet.")
