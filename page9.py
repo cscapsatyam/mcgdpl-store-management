@@ -470,10 +470,6 @@ def run():
 
           with tab_p3:
             st.subheader("Modify Specific Material Records")
-            st.markdown(
-                "ఇక్కడ మీరు టేబుల్‌లో నేరుగా మార్పులు చేసి సేవ్ చేయవచ్చు."
-            )
-
             editable_df = filtered_sup_invoices[
                 [
                     "Store Entry No",
@@ -484,7 +480,6 @@ def run():
                     rate_col,
                 ]
             ].copy()
-
             editable_df["Original_Index"] = filtered_sup_invoices.index
 
             edited_result_df = st.data_editor(
@@ -550,31 +545,59 @@ def run():
                 st.rerun()
 
         st.markdown("---")
-        st.subheader("📅 Month-wise Rental & Invoice Breakdown Report")
+        st.subheader("📑 Month-wise & Material-wise Breakdown Report")
 
-        if "Actualy Recived Date" in filtered_sup_invoices.columns:
+        if (
+            "Actualy Recived Date" in filtered_sup_invoices.columns
+            and mat_desc_col
+        ):
           filtered_sup_invoices["Billing Month"] = pd.to_datetime(
               filtered_sup_invoices["Actualy Recived Date"], errors="coerce"
           ).dt.strftime("%B %Y")
 
-          monthly_report = (
-              filtered_sup_invoices.groupby("Billing Month")
-              .agg(
-                  Total_Items=(mat_desc_col, "count"),
-                  Total_Base_Rent=("Base Rent Value", "sum"),
-                  Total_Tax_18=("Total Rent with 18% Tax", "sum"),
-              )
-              .reset_index()
-          )
+          available_months = [
+              m
+              for m in filtered_sup_invoices["Billing Month"].dropna().unique()
+              if pd.notnull(m)
+          ]
 
-          monthly_report["Total_Base_Rent"] = monthly_report[
-              "Total_Base_Rent"
-          ].round(2)
-          monthly_report["Total_Tax_18"] = monthly_report[
-              "Total_Tax_18"
-          ].round(2)
+          if available_months:
+            month_tabs = st.tabs([f"📅 {m}" for m in available_months])
 
-          st.dataframe(monthly_report, use_container_width=True, hide_index=True)
+            for idx, m_name in enumerate(available_months):
+              with month_tabs[idx]:
+                st.markdown(f"### Material-wise Rent for **{m_name}**")
+                month_sub_df = filtered_sup_invoices[
+                    filtered_sup_invoices["Billing Month"] == m_name
+                ]
+
+                material_report = (
+                    month_sub_df.groupby(mat_desc_col)
+                    .agg(
+                        Total_Qty=(qty_col, "sum"),
+                        Total_Base_Rent=("Base Rent Value", "sum"),
+                        Total_Tax_18=("Total Rent with 18% Tax", "sum"),
+                    )
+                    .reset_index()
+                )
+
+                material_report["Total_Base_Rent"] = material_report[
+                    "Total_Base_Rent"
+                ].round(2)
+                material_report["Total_Tax_18"] = material_report[
+                    "Total_Tax_18"
+                ].round(2)
+                material_report.insert(0, "S.No", range(1, len(material_report) + 1))
+
+                st.data_editor(
+                    material_report,
+                    hide_index=True,
+                    use_container_width=True,
+                    disabled=True,
+                    key=f"mat_report_tab_{idx}",
+                )
+          else:
+            st.info("సరిపడా మంత్లీ డేటా అందుబాటులో లేదు.")
         else:
           st.info("సరిపడా డేటా అందుబాటులో లేదు.")
 
@@ -667,7 +690,7 @@ def run():
               sup_payments,
               hide_index=True,
               use_container_width=True,
-              disabled=True,
+            disabled=True,
               key="akg_pay_table",
           )
         else:
