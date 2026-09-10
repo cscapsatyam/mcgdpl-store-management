@@ -654,9 +654,8 @@ elif page in [
   )
   st.info("Module ready for operational deployment.")
     
-  
-# ================= PAGE 9: AKG SHUTTERINGS DEDICATED LEDGER =================
-elif page == "9. AKG Shutterings Ledger":
+  # ================= PAGE 9: AKG SHUTTERINGS DEDICATED LEDGER =================
+if page == "9. AKG Shutterings Ledger":
   st.title(
       "📑 AKG SHUTTERINGS PRIVATE LIMITED - Rental, Stock Ledger & Tax"
   )
@@ -1070,4 +1069,4 @@ elif page == "9. AKG Shutterings Ledger":
     else:
       st.error("Supplier column not detected in dataset.")
   else:
-    st.info("Please load data records first.")
+    st.info("Please load data records first from the main upload page.")
