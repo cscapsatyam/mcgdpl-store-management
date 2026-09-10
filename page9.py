@@ -118,6 +118,84 @@ def generate_akg_pdf_invoice(
   return buffer.getvalue()
 
 
+def generate_stock_ledger_pdf(stock_df, target_supplier):
+  buffer = io.BytesIO()
+  doc = SimpleDocTemplate(
+      buffer, pagesize=letter, rightMargin=36, leftMargin=36, topMargin=36, bottomMargin=36
+  )
+  elements = []
+  styles = getSampleStyleSheet()
+
+  title_style = ParagraphStyle(
+      'LedgerTitle',
+      parent=styles['Heading1'],
+      fontSize=16,
+      alignment=1,
+      textColor=colors.HexColor('#1f2937'),
+      spaceAfter=4,
+  )
+  sub_style = ParagraphStyle(
+      'LedgerSub',
+      parent=styles['Normal'],
+      fontSize=9,
+      alignment=1,
+      textColor=colors.HexColor('#4b5563'),
+      spaceAfter=15,
+  )
+  cell_style = ParagraphStyle(
+      'TableCell', parent=styles['Normal'], fontSize=9, textColor=colors.HexColor('#1f2937')
+  )
+  header_style = ParagraphStyle(
+      'TableHeader',
+      parent=styles['Normal'],
+      fontSize=9,
+      fontName='Helvetica-Bold',
+      textColor=colors.white,
+  )
+
+  elements.append(Paragraph("<b>AKG SHUTTERINGS PRIVATE LIMITED</b>", title_style))
+  elements.append(
+      Paragraph(
+          f"Material Stock Ledger Summary (Cumulative Up to Date)<br/><b>Supplier:</b> {target_supplier}",
+          sub_style,
+      )
+  )
+
+  table_data = [[
+      Paragraph("S.No", header_style),
+      Paragraph("Material Description", header_style),
+      Paragraph("Total Received Qty", header_style),
+      Paragraph("Returned Qty", header_style),
+      Paragraph("Running Stock At Site", header_style),
+  ]]
+
+  for _, row in stock_df.iterrows():
+    table_data.append([
+        Paragraph(str(row.get("S.No", "")), cell_style),
+        Paragraph(str(row.get("Description Of material", "")), cell_style),
+        Paragraph(str(row.get("Total_Received_Qty", 0)), cell_style),
+        Paragraph(str(row.get("Returned_Qty", 0)), cell_style),
+        Paragraph(str(row.get("Running Stock At Site", 0)), cell_style),
+    ])
+
+  t = Table(table_data, colWidths=[40, 230, 100, 90, 80])
+  t.setStyle(
+      TableStyle([
+          ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#1f2937")),
+          ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+          ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+          ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+          ("TOPPADDING", (0, 0), (-1, -1), 6),
+          ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#d1d5db")),
+      ])
+  )
+  elements.append(t)
+
+  doc.build(elements)
+  buffer.seek(0)
+  return buffer.getvalue()
+
+
 def run():
   st.title("📑 AKG SHUTTERINGS PRIVATE LIMITED - Rental, Stock Ledger & Tax")
   st.markdown(
@@ -321,7 +399,7 @@ def run():
           )
 
           with tab_p1:
-            with st.form("akg_bulk_rate_form_v16"):
+            with st.form("akg_bulk_rate_form_v17"):
               st.subheader("Set Rent Rate (Day-wise Basis)")
               if mat_desc_col:
                 unique_materials = list(
@@ -331,7 +409,7 @@ def run():
                   selected_mat_1 = st.selectbox(
                       "Select Material Name / Description:",
                       unique_materials,
-                      key="bulk_mat_select_1_v16",
+                      key="bulk_mat_select_1_v17",
                   )
 
                   default_bulk_rate = float(
@@ -370,7 +448,7 @@ def run():
                 st.warning("Material description column not available.")
 
           with tab_p2:
-            with st.form("akg_return_qty_form_v16"):
+            with st.form("akg_return_qty_form_v17"):
               st.subheader("Update Material Return & Quantity")
               if mat_desc_col:
                 unique_materials = list(
@@ -380,7 +458,7 @@ def run():
                   selected_mat_2 = st.selectbox(
                       "Select Material Name / Description:",
                       unique_materials,
-                      key="bulk_mat_select_2_v16",
+                      key="bulk_mat_select_2_v17",
                   )
 
                   mat_rows_check = sup_invoices[
@@ -477,10 +555,10 @@ def run():
                 editable_df,
                 hide_index=True,
                 use_container_width=True,
-                key="specific_material_data_editor_v16",
+                key="specific_material_data_editor_v17",
             )
 
-            if st.button("Save Modifications", key="save_mod_btn_v16"):
+            if st.button("Save Modifications", key="save_mod_btn_v17"):
               for idx, row in edited_result_df.iterrows():
                 orig_idx = row["Original_Index"]
                 df.loc[orig_idx, qty_col] = row[qty_col]
@@ -492,7 +570,7 @@ def run():
               st.rerun()
 
           with tab_p4:
-            with st.form("akg_payment_form_v16"):
+            with st.form("akg_payment_form_v17"):
               st.subheader("Add Payment Entry")
               st.text_input(
                   "Vendor Name", value=target_supplier, disabled=True
@@ -519,7 +597,7 @@ def run():
                   st.session_state.payments_df = pd.DataFrame(
                       columns=[
                           "Supplier Name",
-                      "Payment Date",
+                          "Payment Date",
                           "Paid Amount",
                           "Payment Mode",
                           "Reference No",
@@ -571,7 +649,7 @@ def run():
                 "📂 Select Month:",
                 months_list,
                 index=default_m_idx,
-                key="akg_dropdown_month_v16",
+                key="akg_dropdown_month_v17",
             )
           with col_y_sel:
             current_year = datetime.datetime.now().year
@@ -584,7 +662,7 @@ def run():
                 "📅 Select Year:",
                 years_list,
                 index=default_y_idx,
-                key="akg_dropdown_year_v16",
+                key="akg_dropdown_year_v17",
             )
 
           selected_dropdown_month = f"{selected_month_name} {selected_year_val}"
@@ -691,7 +769,7 @@ def run():
                     "Min_Start": st.column_config.TextColumn("Start Date"),
                     "Max_End": st.column_config.TextColumn("Up-to Date"),
                 },
-                key="mat_report_active_table_v16",
+                key="mat_report_active_table_v17",
             )
 
             total_month_basic_rent = material_report["basic_Rent_Value"].sum()
@@ -721,7 +799,7 @@ def run():
                 f"₹ {total_month_tax_rent:,.2f}",
             )
 
-            # PDF Download Button Section with Dates
+            # PDF Download Button for Active Rent Invoice
             st.markdown("")
             pdf_bytes = generate_akg_pdf_invoice(
                 material_report,
@@ -737,7 +815,7 @@ def run():
                 data=pdf_bytes,
                 file_name=f"AKG_Invoice_{selected_month_name}_{selected_year_val}.pdf",
                 mime="application/pdf",
-                key="download_pdf_invoice_btn_v16",
+                key="download_pdf_invoice_btn_v17",
             )
 
           else:
@@ -776,7 +854,7 @@ def run():
             ordered_sup_invoices,
             hide_index=True,
             use_container_width=True,
-            key="akg_inv_table_v16",
+            key="akg_inv_table_v17",
         )
 
         st.markdown("---")
@@ -818,7 +896,20 @@ def run():
               stock_summary,
               hide_index=True,
               use_container_width=True,
-              key="akg_stock_ledger_table_v16",
+              key="akg_stock_ledger_table_v17",
+          )
+
+          # PDF Download Button for Stock Ledger Summary
+          st.markdown("")
+          stock_pdf_bytes = generate_stock_ledger_pdf(
+              stock_summary, target_supplier
+          )
+          st.download_button(
+              label="📥 Download Stock Ledger Summary (PDF)",
+              data=stock_pdf_bytes,
+              file_name="AKG_Material_Stock_Ledger_Summary.pdf",
+              mime="application/pdf",
+              key="download_stock_ledger_pdf_btn",
           )
         else:
           st.info("Material description column not found for stock ledger.")
@@ -830,7 +921,7 @@ def run():
               sup_payments,
               hide_index=True,
               use_container_width=True,
-              key="akg_pay_table_v16",
+              key="akg_pay_table_v17",
           )
         else:
           st.info("No payment transactions recorded for this vendor yet.")
