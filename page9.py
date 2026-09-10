@@ -7,7 +7,7 @@ def run():
   st.title("📑 AKG SHUTTERINGS PRIVATE LIMITED - Rental, Stock Ledger & Tax")
   st.markdown(
       "Exclusive statement breakdown including Store Entry, Return Dates,"
-      " Monthly Stock Rent, Stock Ledger, and 18% Tax Calculation."
+      " Monthly/Day-wise Rent, Stock Ledger, and 18% Tax Calculation."
   )
 
   if "current_df" in st.session_state and not st.session_state.current_df.empty:
@@ -25,9 +25,11 @@ def run():
       if "Return Date" not in df.columns:
         df["Return Date"] = None
 
-      # Initialize session state for standard/bulk material rates if not exists
+      # Session state for standard/bulk material rates and rent types
       if "akg_std_rates" not in st.session_state:
         st.session_state.akg_std_rates = {}
+      if "akg_rent_types" not in st.session_state:
+        st.session_state.akg_rent_types = {}
 
       if not sup_invoices.empty:
         date_col = (
@@ -147,11 +149,30 @@ def run():
               filtered_sup_invoices["Total Days"] / 30.0
           ).round(2)
 
-        filtered_sup_invoices["Base Rent Value"] = (
-            filtered_sup_invoices[qty_col]
-            * filtered_sup_invoices[rate_col]
-            * filtered_sup_invoices["Calculated Months"]
-        ).round(2)
+        # Assign Rent Type Column (Monthly vs Day-wise)
+        def get_rent_basis(row):
+          if mat_desc_col and row.get(mat_desc_col) in st.session_state.get(
+              "akg_rent_types", {}
+          ):
+            return st.session_state["akg_rent_types"][row[mat_desc_col]]
+          return "Monthly"  # Default
+
+        filtered_sup_invoices["Rent Basis"] = filtered_sup_invoices.apply(
+            get_rent_basis, axis=1
+        )
+
+        # Calculate Base Rent Value based on Basis (Monthly or Day-wise)
+        def calc_base_rent(row):
+          qty = row[qty_col]
+          rate = row[rate_col]
+          if row["Rent Basis"] == "Day-wise":
+            return round(qty * rate * row["Total Days"], 2)
+          else:
+            return round(qty * rate * row["Calculated Months"], 2)
+
+        filtered_sup_invoices["Base Rent Value"] = filtered_sup_invoices.apply(
+            calc_base_rent, axis=1
+        )
         filtered_sup_invoices["CGST (9%)"] = (
             filtered_sup_invoices["Base Rent Value"] * 0.09
         ).round(2)
@@ -213,11 +234,15 @@ def run():
         else:
           full_calc_df[rate_col] = 0.0
 
-        full_calc_df["Base Rent Value"] = (
-            full_calc_df[qty_col]
-            * full_calc_df[rate_col]
-            * full_calc_df["Calculated Months"]
-        ).round(2)
+        full_calc_df["Rent Basis"] = full_calc_df.apply(get_rent_basis, axis=1)
+        full_calc_df["Base Rent Value"] = full_calc_df.apply(
+            lambda r: (
+                round(r[qty_col] * r[rate_col] * r["Total Days"], 2)
+                if r["Rent Basis"] == "Day-wise"
+                else round(r[qty_col] * r[rate_col] * r["Calculated Months"], 2)
+            ),
+            axis=1,
+        )
         full_calc_df["Total Rent with 18% Tax"] = (
             full_calc_df["Base Rent Value"] * 1.18
         ).round(2)
@@ -258,13 +283,13 @@ def run():
 
         with st.expander(
             "✏️ Click Here to Update Return Date, Qty & Rates / Set Bulk"
-            " Material Rate / Add Payment",
+            " Material Rate & Rent Basis / Add Payment",
             expanded=False,
         ):
           tab_p1, tab_p2, tab_p3 = st.tabs(
               [
                   "📦 Update Single Entry",
-                  "⚙️ Bulk Material Rate Master",
+                  "⚙️ Bulk Material Rate & Rent Basis",
                   "💳 Add Payment",
               ]
           )
@@ -308,7 +333,7 @@ def run():
                   )
                 with col_e2:
                   new_rate = st.number_input(
-                      "Monthly Rent Rate (₹)",
+                      "Rent Rate (₹)",
                       value=curr_rate,
                       min_value=0.0,
                       format="%.2f",
@@ -352,10 +377,7 @@ def run():
 
           with tab_p2:
             with st.form("akg_bulk_rate_form"):
-              st.subheader(
-                  "Set Same Rent Rate for Specific Material (Applies to All"
-                  " Entries)"
-              )
+              st.subheader("Set Rate and Rent Basis (Monthly / Day-wise)")
               if mat_desc_col:
                 unique_materials = list(
                     sup_invoices[mat_desc_col].dropna().unique()
@@ -367,21 +389,40 @@ def run():
                   default_bulk_rate = float(
                       st.session_state.akg_std_rates.get(selected_mat, 0.0)
                   )
-                  bulk_rate_val = st.number_input(
-                      "Standard Monthly Rent Rate for this Material (₹)",
-                      value=default_bulk_rate,
-                      min_value=0.0,
-                      format="%.2f",
+                  default_basis = st.session_state.akg_rent_types.get(
+                      selected_mat, "Monthly"
                   )
 
+                  col_b1, col_b2 = st.columns(2)
+                  with col_b1:
+                    bulk_rate_val = st.number_input(
+                        "Rent Rate for this Material (₹)",
+                        value=default_bulk_rate,
+                        min_value=0.0,
+                        format="%.2f",
+                    )
+                  with col_b2:
+                    rent_basis_val = st.selectbox(
+                        "Rent Calculation Basis:",
+                        ["Monthly", "Day-wise"],
+                        index=(
+                            0
+                            if default_basis == "Monthly"
+                            else (1 if default_basis == "Day-wise" else 0)
+                        ),
+                    )
+
                   submitted_bulk = st.form_submit_button(
-                      "Apply Same Rate to All Entries of this Material"
+                      "Apply Rate & Basis to All Entries of this Material"
                   )
                   if submitted_bulk:
                     st.session_state.akg_std_rates[selected_mat] = bulk_rate_val
+                    st.session_state.akg_rent_types[selected_mat] = (
+                        rent_basis_val
+                    )
                     st.success(
-                        f"Standard rate ₹{bulk_rate_val} set for '{selected_mat}'"
-                        " successfully!"
+                        f"Updated '{selected_mat}' -> Rate: ₹{bulk_rate_val},"
+                        f" Basis: {rent_basis_val} successfully!"
                     )
                     st.rerun()
                 else:
@@ -446,6 +487,7 @@ def run():
             "UOM",
             qty_col,
             rate_col,
+            "Rent Basis",
             "Total Days",
             "Calculated Months",
             "Base Rent Value",
