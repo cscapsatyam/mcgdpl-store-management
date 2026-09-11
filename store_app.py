@@ -1,13 +1,22 @@
+import io
 import os
 import pandas as pd
+from reportlab.lib import colors
+from reportlab.lib.pagesizes import A4, landscape
+from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.platypus import Paragraph, SimpleDocTemplate, Table, TableStyle
 import streamlit as st
+
+# 🔗 మీ GitHub Raw Excel Link ను ఇక్కడ Paste చేయండి
+# (గమనిక: 'YOUR_USERNAME' మరియు 'YOUR_REPO' స్థానంలో మీ వివరాలను మార్చండి)
+GITHUB_EXCEL_URL = "https://raw.githubusercontent.com/YOUR_USERNAME/YOUR_REPO/main/BookA1.xlsx"
 
 st.set_page_config(
     page_title="Movone Infrastructure Private Limited", layout="wide"
 )
 
 
-# --- Helper Function: Column Names Flexibly Find చేయడానికి ---
+# --- Helper Function: Excel Column Names Flexibly Find చేయడానికి ---
 def find_column(df, possible_keywords):
   for col in df.columns:
     clean_col = (
@@ -31,7 +40,47 @@ def find_column(df, possible_keywords):
   return None
 
 
-# Custom Styling with Professional ERP Look & A4 Border Print Layout
+# --- Helper Function: Direct PDF Generate చేయడానికి ---
+def generate_pdf_download(df, title="Store Inventory Report"):
+  buffer = io.BytesIO()
+  doc = SimpleDocTemplate(
+      buffer,
+      pagesize=landscape(A4),
+      rightMargin=15,
+      leftMargin=15,
+      topMargin=20,
+      bottomMargin=20,
+  )
+  elements = []
+
+  styles = getSampleStyleSheet()
+  title_style = styles["Title"]
+  title_style.fontSize = 14
+  elements.append(Paragraph(f"<b>{title}</b>", title_style))
+
+  pdf_data = [df.columns.tolist()] + df.astype(str).values.tolist()
+
+  table = Table(pdf_data, repeatRows=1)
+  table.setStyle(
+      TableStyle([
+          ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#0d6efd")),
+          ("TEXTCOLOR", (0, 0), (-1, 0), colors.whitesmoke),
+          ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+          ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+          ("FONTSIZE", (0, 0), (-1, -1), 7),
+          ("BOTTOMPADDING", (0, 0), (-1, 0), 5),
+          ("BACKGROUND", (0, 1), (-1, -1), colors.HexColor("#f8f9fa")),
+          ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#cccccc")),
+      ])
+  )
+
+  elements.append(table)
+  doc.build(elements)
+  buffer.seek(0)
+  return buffer.getvalue()
+
+
+# Custom ERP Styling
 st.markdown(
     """
     <style>
@@ -58,67 +107,25 @@ st.markdown(
         border-radius: 6px;
         box-shadow: 0 2px 4px rgba(0,0,0,0.05);
     }
-
-    /* --- A4 SIZE PDF & PRINT STYLING WITH BORDER DESIGN --- */
-    @media print {
-        @page {
-            size: A4 portrait;
-            margin: 10mm;
-        }
-        
-        header, footer, nav, .stSidebar, div[data-testid="stSidebar"], button {
-            display: none !important;
-        }
-        
-        body {
-            background: white !important;
-            color: black !important;
-            font-family: Arial, sans-serif !important;
-            font-size: 11pt;
-        }
-        
-        .main, .block-container {
-            padding: 15px !important;
-            margin: 0 !important;
-            width: 100% !important;
-            border: 3px double #333333 !important;
-            box-sizing: border-box;
-        }
-
-        table {
-            width: 100% !important;
-            border-collapse: collapse !important;
-            margin-top: 10px;
-        }
-        th, td {
-            border: 1px solid #666666 !important;
-            padding: 6px 8px !important;
-            text-align: left;
-            font-size: 10pt;
-        }
-        th {
-            background-color: #e9ecef !important;
-            color: black !important;
-            -webkit-print-color-adjust: exact;
-        }
-    }
     </style>
     """,
     unsafe_allow_html=True,
 )
 
-# Initialize Session State variables
+# Initialize Session State & GitHub నుండి డేటా లోడ్ చేయడం
 if "current_df" not in st.session_state:
   st.session_state.current_df = pd.DataFrame()
 
 if st.session_state.current_df.empty:
   try:
-    df_auto = pd.read_excel("Book1.xlsx", sheet_name=0)
+    df_auto = pd.read_excel(GITHUB_EXCEL_URL, sheet_name=0)
     st.session_state.current_df = df_auto
   except Exception as e:
-    pass
+    st.warning(
+        "GitHub URL నుండి డేటా లోడ్ కాలేదు. దయచేసి 12వ లైన్‌లో మీ GitHub Raw Link సరిగ్గా ఇచ్చారో లేదో తనిఖీ చేయండి."
+    )
 
-# --- ERP TOP HORIZONTAL NAVIGATION TABS ---
+# --- ERP TOP NAVIGATION TABS ---
 st.markdown(
     """
     <div class="erp-header">
@@ -152,17 +159,20 @@ if page == "1. Dashboard / Home":
     else:
       df.insert(0, "Sl No", range(1, len(df) + 1))
 
+    # PDF Download Button
+    pdf_bytes = generate_pdf_download(
+        df, title="Complete Store Inventory Report"
+    )
+
     col_btn1, col_btn2 = st.columns([6, 1])
     with col_btn2:
-      if st.button("🖨️ Print / PDF", key="print_page1"):
-        st.markdown(
-            """
-                    <script>
-                    setTimeout(function() { window.print(); }, 500);
-                    </script>
-                    """,
-            unsafe_allow_html=True,
-        )
+      st.download_button(
+          label="📥 Download PDF",
+          data=pdf_bytes,
+          file_name="Store_Inventory_Report.pdf",
+          mime="application/pdf",
+          use_container_width=True,
+      )
 
     calc_height = min(max(len(df) * 38 + 40, 150), 500)
     st.data_editor(
@@ -184,7 +194,7 @@ if page == "1. Dashboard / Home":
       except Exception as e:
         st.error(f"Error loading file: {e}")
 
-# ================= PAGE 2: MATERIAL REGISTER VIEW (WITH FILTERS & SUB-TOTAL) =================
+# ================= PAGE 2: MATERIAL REGISTER VIEW =================
 elif page == "2. Material Register View":
   st.title("📋 Material Register View")
   st.markdown("Filter material records and view supplier sub-totals.")
@@ -194,7 +204,7 @@ elif page == "2. Material Register View":
 
     col1, col2 = st.columns(2)
 
-    # 1. Supplier Name Filter
+    # 1. Supplier Filter
     supplier_col = find_column(
         df, ["Supplier/Sender Name", "Supplier", "Sender", "Vendor"]
     )
@@ -207,7 +217,7 @@ elif page == "2. Material Register View":
       if selected_supplier != "All":
         df = df[df[supplier_col] == selected_supplier]
 
-    # 2. Receipt Type Filter
+    # 2. Receipt Filter
     receipt_col = find_column(
         df,
         [
@@ -226,7 +236,7 @@ elif page == "2. Material Register View":
       if selected_receipt != "All":
         df = df[df[receipt_col] == selected_receipt]
 
-    # 3. Sub-Total Calculations
+    # 3. Sub-Totals Calculation
     total_val_col = find_column(
         df,
         [
@@ -265,7 +275,6 @@ elif page == "2. Material Register View":
           .sum()
       )
 
-    # Display Sub-Total Metrics
     st.markdown("---")
     m1, m2, m3 = st.columns(3)
     m1.metric("Selected Supplier", selected_supplier)
@@ -280,17 +289,21 @@ elif page == "2. Material Register View":
       df.insert(0, "Sl No", range(1, len(df) + 1))
 
     st.markdown("---")
+
+    # Filtered PDF Download Button
+    pdf_bytes_filtered = generate_pdf_download(
+        df, title=f"Material Register - Supplier: {selected_supplier}"
+    )
+
     col_b1, col_b2 = st.columns([6, 1])
     with col_b2:
-      if st.button("🖨️ Print / PDF", key="print_page2"):
-        st.markdown(
-            """
-                    <script>
-                    setTimeout(function() { window.print(); }, 500);
-                    </script>
-                    """,
-            unsafe_allow_html=True,
-        )
+      st.download_button(
+          label="📥 Download PDF",
+          data=pdf_bytes_filtered,
+          file_name=f"Material_Register_{selected_supplier}.pdf",
+          mime="application/pdf",
+          use_container_width=True,
+      )
 
     calc_height = min(max(len(df) * 38 + 40, 150), 500)
     st.data_editor(
