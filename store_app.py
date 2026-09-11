@@ -41,29 +41,33 @@ def find_column(df, possible_keywords):
   return None
 
 
-# --- Helper Function: Clean & Perfect PDF A4 Landscape Layout ---
+# --- Helper Function: PDF A4 Landscape Layout & Perfect Spacing ---
 def generate_pdf_download(df, title="Store Inventory Report"):
   buffer = io.BytesIO()
+  # A4 Landscape with spacious margins for clean look
   doc = SimpleDocTemplate(
       buffer,
       pagesize=landscape(A4),
-      rightMargin=15,
-      leftMargin=15,
-      topMargin=20,
-      bottomMargin=20,
+      rightMargin=20,
+      leftMargin=20,
+      topMargin=25,
+      bottomMargin=25,
   )
   elements = []
 
   styles = getSampleStyleSheet()
   title_style = styles["Title"]
-  title_style.fontSize = 12
+  title_style.fontSize = 14
   elements.append(Paragraph(f"<b>{title}</b>", title_style))
   elements.append(Paragraph("<br/>", styles["Normal"]))
 
+  # Data formatting for PDF
   pdf_data = [df.columns.tolist()] + df.astype(str).values.tolist()
 
+  # A4 Landscape width calculation for expanded row/column size
   num_cols = len(df.columns)
-  col_width = 780 / num_cols if num_cols > 0 else 50
+  # Landscape width is roughly 842 points. Margins take 40, leaving ~800 for table.
+  col_width = 800 / num_cols if num_cols > 0 else 60
   col_widths = [col_width] * num_cols
 
   table = Table(pdf_data, colWidths=col_widths, repeatRows=1)
@@ -74,11 +78,22 @@ def generate_pdf_download(df, title="Store Inventory Report"):
           ("ALIGN", (0, 0), (-1, -1), "CENTER"),
           ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
           ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
-          ("FONTSIZE", (0, 0), (-1, -1), 5.5),
-          ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
-          ("TOPPADDING", (0, 0), (-1, -1), 4),
+          ("FONTSIZE", (0, 0), (-1, -1), 7),  # Clear & readable font size
+          (
+              "BOTTOMPADDING",
+              (0, 0),
+              (-1, -1),
+              6,
+          ),  # Increased row height & spacing
+          ("TOPPADDING", (0, 0), (-1, -1), 6),
           ("BACKGROUND", (0, 1), (-1, -1), colors.HexColor("#f8f9fa")),
-          ("GRID", (0, 0), (-1, -1), 0.4, colors.HexColor("#cccccc")),
+          (
+              "GRID",
+              (0, 0),
+              (-1, -1),
+              0.5,
+              colors.HexColor("#bbbbbb"),
+          ),  # Clean visible borders
       ])
   )
 
@@ -134,13 +149,13 @@ if "current_df" not in st.session_state:
 
 if st.session_state.current_df.empty:
   try:
-    # 📌 ఎక్సెల్ ఫైల్‌లో మొదటి రో లో నంబర్లు ఉంటే వాటిని వదిలేయడానికి header=1 వాడుతున్నాము
+    # 📌 సరైన హెడర్ రో ని పట్టుకోవడానికి header=1 వాడుతున్నాము
     df_auto = pd.read_excel(GITHUB_EXCEL_URL, sheet_name=0, header=1)
 
-    # ఒకవేళ హెడర్ సరిగ్గా రాకపోతే మొదటి రో ని పూర్తిగా తొలగించడం
+    # మొదటి రో లో ఒకవేళ నంబర్లు ఉంటే వాటిని వదిలి అసలైన హెడర్‌ని సెట్ చేయడం
     if len(df_auto) > 0:
-      first_col_name = str(df_auto.columns[0])
-      if first_col_name.isdigit() or "Unnamed" in first_col_name:
+      first_col = str(df_auto.columns[0])
+      if first_col.isdigit() or "Unnamed" in first_col:
         df_auto = pd.read_excel(GITHUB_EXCEL_URL, sheet_name=0, header=2)
 
     # 1. Unnamed ఖాళీ కాలమ్స్‌ని తొలగించడం
@@ -153,7 +168,7 @@ if st.session_state.current_df.empty:
     if recv_col:
       df_auto = df_auto.drop(columns=[recv_col])
 
-    # 3. నంబర్స్ / అమౌంట్స్ / డెసిమల్స్ ప్రాబ్లమ్ రాకుండా క్లీన్ చేయడం & రౌండ్ ఆఫ్ చేయడం
+    # 3. డేట్స్ మరియు డెసిమల్ నంబర్స్ క్లీన్ చేయడం (రౌండ్ ఆఫ్ 2 డెసిమల్స్)
     for col in df_auto.columns:
       col_lower = str(col).lower()
       if "date" in col_lower or "dt" in col_lower:
@@ -164,9 +179,7 @@ if st.session_state.current_df.empty:
         )
         df_auto[col] = df_auto[col].replace("NaT", "").replace("NaN", "")
       else:
-        # వాల్యూస్ లేదా అమౌంట్ కాలమ్స్‌లో అంకెలు పొడవుగా రాకుండా 2 డెసిమల్స్‌కు రౌండ్ చేయడం
         try:
-          # ఇది నంబర్ అయితే 2 డెసిమల్స్‌కు మారుస్తుంది
           numeric_series = pd.to_numeric(df_auto[col], errors="coerce")
           if (
               numeric_series.notnull().sum() > 0
@@ -243,7 +256,8 @@ if page == "1. Dashboard / Home":
           use_container_width=True,
       )
 
-    calc_height = min(max(len(df) * 38 + 40, 150), 500)
+    # Increased DataFrame height for clear visibility without crowding
+    calc_height = min(max(len(df) * 45 + 50, 200), 650)
     st.dataframe(df, hide_index=True, use_container_width=True, height=calc_height)
   else:
     st.info("Please load data source first.")
@@ -319,7 +333,7 @@ elif page == "2. Material Register View":
           .sum()
       )
 
-    if challan_qty_col and challan_qty_col in df.current_df if hasattr(df, "current_df") else challan_qty_col in df.columns:
+    if challan_qty_col and challan_qty_col in df.columns:
       total_qty = (
           pd.to_numeric(
               df[challan_qty_col]
@@ -361,7 +375,7 @@ elif page == "2. Material Register View":
           use_container_width=True,
       )
 
-    calc_height = min(max(len(df) * 38 + 40, 150), 500)
+    calc_height = min(max(len(df) * 45 + 50, 200), 650)
     st.dataframe(df, hide_index=True, use_container_width=True, height=calc_height)
   else:
     st.info("Please load data source first.")
