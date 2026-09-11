@@ -41,7 +41,7 @@ def find_column(df, possible_keywords):
   return None
 
 
-# --- Helper Function: Professional PDF A4 Landscape Layout (CGST/SGST Widths Optimized) ---
+# --- Helper Function: Professional PDF A4 Landscape Layout (Remarks Removed & Widths Optimized) ---
 def generate_pdf_download(df, title="Store Inventory Report"):
   buffer = io.BytesIO()
   # A4 Landscape with compact margins to maximize printable area
@@ -94,7 +94,7 @@ def generate_pdf_download(df, title="Store Inventory Report"):
     ]
     table_data.append(row_data)
 
-  # 📌 కాలమ్ పేరును బట్టి కస్టమ్ విడ్త్ (CGST & SGST విడ్త్ తగ్గించబడింది)
+  # 📌 కాలమ్ పేరును బట్టి కస్టమ్ విడ్త్ (Remarks తొలగించబడింది కాబట్టి స్పేస్ రీ-డిస్ట్రిబ్యూట్ చేయబడింది)
   total_available_width = 822  # A4 Landscape available width
   num_cols = len(df.columns)
   col_widths = []
@@ -102,21 +102,17 @@ def generate_pdf_download(df, title="Store Inventory Report"):
   for col in df.columns:
     col_l = str(col).lower()
     if "description" in col_l or "material" in col_l:
-      col_widths.append(95)  # మెటీరియల్ డిస్క్రిప్షన్‌కు మరింత ఎక్కువ వెడల్పు
+      col_widths.append(110)  # మెటీరియల్ డిస్క్రిప్షన్‌కు మరింత ఎక్కువ వెడల్పు
     elif "supplier" in col_l or "sender" in col_l:
-      col_widths.append(80)  # సప్లయర్ పేరుకు
+      col_widths.append(90)  # సప్లయర్ పేరుకు
     elif "cgst" in col_l or "sgst" in col_l:
-      col_widths.append(
-          22
-      )  # 📌 CGST & SGST కాలమ్స్ చాలా చిన్నవిగా (తగ్గించబడ్డాయి)
+      col_widths.append(22)  # CGST & SGST చిన్నవిగా
     elif "date" in col_l:
-      col_widths.append(42)  # డేట్స్‌కు
+      col_widths.append(45)  # డేట్స్‌కు
     elif "no" in col_l or "sl" in col_l:
       col_widths.append(28)  # నంబర్స్‌కు
     else:
-      col_widths.append(
-          max(35, total_available_width / num_cols)
-      )  # మిగతా వాటికి ఆటో-డిస్ట్రిబ్యూషన్
+      col_widths.append(max(40, total_available_width / num_cols))
 
   table = Table(table_data, colWidths=col_widths, repeatRows=1)
   table.setStyle(
@@ -193,9 +189,16 @@ if st.session_state.current_df.empty:
     df_auto = df_auto.loc[
         :, ~df_auto.columns.astype(str).str.contains("^Unnamed", case=False)
     ]
-    recv_col = find_column(df_auto, ["Received Qty"])
-    if recv_col:
-      df_auto = df_auto.drop(columns=[recv_col])
+
+    # 📌 'Remarks' మరియు 'Received Qty' కాలమ్స్‌ని ఆటోమేటిక్‌గా తొలగించడం
+    cols_to_drop = []
+    for col in df_auto.columns:
+      col_l = str(col).lower()
+      if "remark" in col_l or "receivedqty" in col_l:
+        cols_to_drop.append(col)
+
+    if cols_to_drop:
+      df_auto = df_auto.drop(columns=cols_to_drop)
 
     for col in df_auto.columns:
       col_lower = str(col).lower()
