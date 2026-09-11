@@ -7,9 +7,8 @@ from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.platypus import Paragraph, SimpleDocTemplate, Table, TableStyle
 import streamlit as st
 
-# 🔗 మీ GitHub Raw Excel Link ను ఇక్కడ Paste చేయండి
-# (గమనిక: 'YOUR_USERNAME' మరియు 'YOUR_REPO' స్థానంలో మీ వివరాలను మార్చండి)
-GITHUB_EXCEL_URL = "https://raw.githubusercontent.com/YOUR_USERNAME/YOUR_REPO/main/BookA1.xlsx"
+# 🔗 మీ GitHub Raw Excel లింక్ ఆటోమేటిక్‌గా సెట్ చేయబడింది
+GITHUB_EXCEL_URL = "https://raw.githubusercontent.com/cscapsatyam/mcgdpl-store-management/main/BookA1.xlsx"
 
 st.set_page_config(
     page_title="Movone Infrastructure Private Limited", layout="wide"
@@ -112,7 +111,7 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-# Initialize Session State & GitHub నుండి డేటా లోడ్ చేయడం
+# Initialize Session State & GitHub నుండి డేటా ఆటోమేటిక్‌గా లోడ్ చేయడం
 if "current_df" not in st.session_state:
   st.session_state.current_df = pd.DataFrame()
 
@@ -122,7 +121,8 @@ if st.session_state.current_df.empty:
     st.session_state.current_df = df_auto
   except Exception as e:
     st.warning(
-        "GitHub URL నుండి డేటా లోడ్ కాలేదు. దయచేసి 12వ లైన్‌లో మీ GitHub Raw Link సరిగ్గా ఇచ్చారో లేదో తనిఖీ చేయండి."
+        f"GitHub నుండి డేటా లోడ్ కాలేదు: {e}. దయచేసి ఫైల్ పేరు లేదా పాత్ సరిగ్గా"
+        " ఉందో లేదో తనిఖీ చేయండి."
     )
 
 # --- ERP TOP NAVIGATION TABS ---
