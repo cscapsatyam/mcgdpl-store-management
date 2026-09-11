@@ -1,6 +1,16 @@
 import datetime
+import io
 import pandas as pd
 import streamlit as st
+
+
+# --- Excel Download Helper Function ---
+def convert_df_to_excel(df):
+  output = io.BytesIO()
+  with pd.ExcelWriter(output, engine="openpyxl") as writer:
+    df.to_excel(writer, index=False, sheet_name="Sheet1")
+  processed_data = output.getvalue()
+  return processed_data
 
 
 def run():
@@ -60,7 +70,7 @@ def run():
   if "material_issue_records" not in st.session_state:
     st.session_state.material_issue_records = []
 
-  # --- Navigation Tabs (Separated Masters) ---
+  # --- Navigation Tabs ---
   (
       tab_entry,
       tab_register,
@@ -208,7 +218,7 @@ def run():
 
   # --- TAB 2: STORE INWARD REGISTER ---
   with tab_register:
-    st.markdown("### 📦 Store Inward Register (Editable)")
+    st.markdown("### 📦 Store Inward Register (Editable & Export)")
     if st.session_state.mipl_records:
       df = pd.DataFrame(st.session_state.mipl_records)
       edited_df = st.data_editor(
@@ -218,12 +228,22 @@ def run():
           key="mipl_register_editor",
       )
       st.session_state.mipl_records = edited_df.to_dict("records")
+
+      excel_data = convert_df_to_excel(edited_df)
+      st.download_button(
+          label="📥 Download Inward Register as Excel",
+          data=excel_data,
+          file_name=f"Store_Inward_Register_{datetime.date.today()}.xlsx",
+          mime=(
+              "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+          ),
+      )
     else:
       st.info("No records found.")
 
   # --- TAB 3: STOCK LEDGER SUMMARY ---
   with tab_summary:
-    st.markdown("### 📈 Stock Ledger Summary")
+    st.markdown("### 📈 Stock Ledger Summary & Export")
     if st.session_state.mipl_records:
       current_df = pd.DataFrame(st.session_state.mipl_records)
       if (
@@ -243,6 +263,16 @@ def run():
             "Total Received Qty",
         ]
         st.dataframe(summary_df, hide_index=True, use_container_width=True)
+
+        excel_data = convert_df_to_excel(summary_df)
+        st.download_button(
+            label="📥 Download Stock Ledger as Excel",
+            data=excel_data,
+            file_name=f"Stock_Ledger_Summary_{datetime.date.today()}.xlsx",
+            mime=(
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            ),
+        )
     else:
       st.warning("No data available.")
 
@@ -282,20 +312,29 @@ def run():
           axis=1,
       )
 
+      final_po_status_df = po_status_df[
+          [
+              "Purchase Order No",
+              "Supplier Name",
+              "Material Description",
+              "Qty of Order",
+              "Received Qty",
+              "Pending Qty",
+              "Status",
+          ]
+      ]
       st.dataframe(
-          po_status_df[
-              [
-                  "Purchase Order No",
-                  "Supplier Name",
-                  "Material Description",
-                  "Qty of Order",
-                  "Received Qty",
-                  "Pending Qty",
-                  "Status",
-              ]
-          ],
-          hide_index=True,
-          use_container_width=True,
+          final_po_status_df, hide_index=True, use_container_width=True
+      )
+
+      excel_data = convert_df_to_excel(final_po_status_df)
+      st.download_button(
+          label="📥 Download PO Status as Excel",
+          data=excel_data,
+          file_name=f"PO_Status_Tracking_{datetime.date.today()}.xlsx",
+          mime=(
+              "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+          ),
       )
     else:
       st.info("No Purchase Orders available to track.")
@@ -353,6 +392,16 @@ def run():
           "records"
       )
 
+      excel_data = convert_df_to_excel(edited_issue_df)
+      st.download_button(
+          label="📥 Download Material Issue as Excel",
+          data=excel_data,
+          file_name=f"Material_Issue_Register_{datetime.date.today()}.xlsx",
+          mime=(
+              "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+          ),
+      )
+
   # --- TAB 6: PURCHASE ORDERS ---
   with tab_po:
     st.markdown("### 📋 Supplier Order List (Purchase Orders)")
@@ -390,7 +439,7 @@ def run():
       )
       st.session_state.po_records = edited_po_df.to_dict("records")
 
-  # --- TAB 7: SUPPLIER MASTER (Dedicated Tab) ---
+  # --- TAB 7: SUPPLIER MASTER ---
   with tab_sup_master:
     st.markdown("### 🏢 Supplier Master Management")
     with st.form("supplier_add_form", clear_on_submit=True):
@@ -426,7 +475,7 @@ def run():
       )
       st.session_state.supplier_master = edited_sup_df.to_dict("records")
 
-  # --- TAB 8: MATERIAL MASTER (Dedicated Tab) ---
+  # --- TAB 8: MATERIAL MASTER ---
   with tab_mat_master:
     st.markdown("### 🧱 Material Master Management")
     with st.form("material_add_form", clear_on_submit=True):
@@ -465,7 +514,7 @@ def run():
       )
       st.session_state.material_master = edited_mat_df.to_dict("records")
 
-  # --- TAB 9: SUBCONTRACTOR MASTER (Dedicated Tab) ---
+  # --- TAB 9: SUBCONTRACTOR MASTER ---
   with tab_sub_master:
     st.markdown("### 👷 Subcontractor Master Management")
     with st.form("subcontractor_add_form", clear_on_submit=True):
@@ -474,7 +523,7 @@ def run():
         sub_name = st.text_input("Sub Contractor Name")
       with subc2:
         sub_phone = st.text_input("Phone Number")
-      
+
       sub_submitted = st.form_submit_button("➕ Add New Subcontractor")
 
       if sub_submitted:
