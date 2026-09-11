@@ -79,7 +79,6 @@ def run():
       ]
   )
 
-  # Dropdown options extracted from masters & POs
   supplier_options = [s["Supplier Name"] for s in st.session_state.supplier_master]
   material_options = [
       m["Material Description"] for m in st.session_state.material_master
@@ -92,24 +91,59 @@ def run():
       po["Purchase Order No"] for po in st.session_state.po_records
   ]
 
-  # --- TAB 1: MANUAL ENTRY FORM (Linked with PO Dropdown) ---
+  # --- TAB 1: MANUAL ENTRY FORM (Auto-fill Supplier & Material from PO) ---
   with tab_entry:
-    st.markdown("### 📝 Add New Store Inward Entry (Linked with PO)")
+    st.markdown(
+        "### 📝 Add New Store Inward Entry (Auto-linked with PO Selection)"
+    )
 
-    with st.form("manual_entry_form", clear_on_submit=True):
+    # Callback function to auto-update supplier and material when PO is selected
+    def on_po_change():
+      selected = st.session_state.get("selected_po_input", "None / Direct Receipt")
+      if selected != "None / Direct Receipt":
+        matched_po = next(
+            (
+                p
+                for p in st.session_state.po_records
+                if p["Purchase Order No"] == selected
+            ),
+            None,
+        )
+        if matched_po:
+          if matched_po["Supplier Name"] in supplier_options:
+            st.session_state["supplier_select_input"] = matched_po[
+                "Supplier Name"
+            ]
+          if matched_po["Material Description"] in material_options:
+            st.session_state["material_select_input"] = matched_po[
+                "Material Description"
+            ]
+
+    with st.form("manual_entry_form", clear_on_submit=False):
       col1, col2, col3 = st.columns(3)
 
       with col1:
         store_inward_no = st.text_input("Store Inward No")
         selected_po = st.selectbox(
-            "Select Purchase Order (Optional)", po_options
+            "Select Purchase Order (Optional)",
+            po_options,
+            key="selected_po_input",
+            on_change=on_po_change,
         )
-        supplier_name = st.selectbox("Supplier/Sender Name", supplier_options)
+        supplier_name = st.selectbox(
+            "Supplier/Sender Name",
+            supplier_options,
+            key="supplier_select_input",
+        )
         invoice_no = st.text_input("Invoice/Delivery Challan No")
         entry_date = st.date_input("Date", datetime.date.today())
 
       with col2:
-        material_desc = st.selectbox("Description Of Material", material_options)
+        material_desc = st.selectbox(
+            "Description Of Material",
+            material_options,
+            key="material_select_input",
+        )
         uom = st.selectbox(
             "UOM", ["Bags", "Cu.M", "MT", "Nos", "Kgs", "Litres", "Bundles"]
         )
@@ -168,7 +202,7 @@ def run():
             "Remarks": remarks,
         }
         st.session_state.mipl_records.append(new_entry)
-        st.success("Entry added successfully with PO linkage!")
+        st.success("Entry added successfully with auto-linked PO details!")
 
   # --- TAB 2: STORE INWARD REGISTER ---
   with tab_register:
@@ -213,15 +247,8 @@ def run():
   # --- TAB 4: PO STATUS & TRACKING ---
   with tab_po_status:
     st.markdown("### 📊 Purchase Order Status & Tracking")
-    st.info(
-        "Compare total ordered quantity against total received quantity per"
-        " Purchase Order."
-    )
-
     if st.session_state.po_records:
       po_df = pd.DataFrame(st.session_state.po_records)
-
-      # Calculate received quantity per PO from store inward records
       if st.session_state.mipl_records:
         inward_df = pd.DataFrame(st.session_state.mipl_records)
         if "Purchase Order No" in inward_df.columns:
@@ -243,7 +270,6 @@ def run():
         po_status_df = po_df.copy()
         po_status_df["Received Qty"] = 0.0
 
-      # Calculate Pending Quantity & Status
       po_status_df["Pending Qty"] = (
           po_status_df["Qty of Order"] - po_status_df["Received Qty"]
       )
