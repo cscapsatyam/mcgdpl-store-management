@@ -1,12 +1,36 @@
-import datetime
 import os
-import numpy as np
 import pandas as pd
 import streamlit as st
 
 st.set_page_config(
-    page_title="Movone Infrastructue Private Limited", layout="wide"
+    page_title="Movone Infrastructure Private Limited", layout="wide"
 )
+
+
+# --- Helper Function: Column Names Flexibly Find చేయడానికి ---
+def find_column(df, possible_keywords):
+  """Excel లో స్పేస్‌లు, కేస్ తేడాలు ఉన్నా సరైన Column Name ని గుర్తించే ఫంక్షన్"""
+  for col in df.columns:
+    clean_col = (
+        str(col)
+        .lower()
+        .replace(" ", "")
+        .replace("/", "")
+        .replace(".", "")
+        .replace("_", "")
+    )
+    for kw in possible_keywords:
+      clean_kw = (
+          kw.lower()
+          .replace(" ", "")
+          .replace("/", "")
+          .replace(".", "")
+          .replace("_", "")
+      )
+      if clean_kw in clean_col:
+        return col
+  return None
+
 
 # Custom Styling with Professional ERP Look & A4 Border Print Layout
 st.markdown(
@@ -62,16 +86,6 @@ st.markdown(
             box-sizing: border-box;
         }
 
-        div[data-baseweb="modal"] {
-            position: absolute !important;
-            left: 0 !important;
-            top: 0 !important;
-            width: 100% !important;
-            background: white !important;
-            border: 3px double #333333 !important;
-            padding: 20px !important;
-        }
-
         table {
             width: 100% !important;
             border-collapse: collapse !important;
@@ -118,9 +132,7 @@ st.markdown(
 
 page = st.radio(
     "Navigation Menu",
-    [
-        "1. Dashboard / Home"
-    ],
+    ["1. Dashboard / Home"],
     horizontal=True,
 )
 
@@ -135,25 +147,42 @@ if page == "1. Dashboard / Home":
     df = st.session_state.current_df.copy()
 
     col1, col2 = st.columns(2)
-    supplier_col = "Supplier / Sendor Name"
-    if supplier_col in df.columns:
+
+    # Dynamic Matching for Supplier Column
+    supplier_col = find_column(
+        df, ["Supplier/Sender Name", "Supplier", "Sender", "Vendor"]
+    )
+    if supplier_col:
       suppliers = ["All"] + list(df[supplier_col].dropna().unique())
       selected_supplier = col1.selectbox("Filter by Supplier Name:", suppliers)
       if selected_supplier != "All":
         df = df[df[supplier_col] == selected_supplier]
 
-    receipt_col = "Type Reciept"
-    if receipt_col in df.columns:
+    # Dynamic Matching for Receipt Type Column
+    receipt_col = find_column(
+        df,
+        [
+            "Vehicle No.Type of Receipt",
+            "Type of Receipt",
+            "Receipt Type",
+            "Receipt",
+            "Reciept",
+        ],
+    )
+    if receipt_col:
       receipts = ["All"] + list(df[receipt_col].dropna().unique())
       selected_receipt = col2.selectbox("Filter by Receipt Type:", receipts)
       if selected_receipt != "All":
         df = df[df[receipt_col] == selected_receipt]
 
     df = df.reset_index(drop=True)
-    if "S.No" in df.columns:
-      df["S.No"] = range(1, len(df) + 1)
+
+    # Dynamic Matching for Serial Number Column
+    sl_col = find_column(df, ["Sl No", "S.No", "SlNo", "SNo", "Serial No"])
+    if sl_col:
+      df[sl_col] = range(1, len(df) + 1)
     else:
-      df.insert(0, "S.No", range(1, len(df) + 1))
+      df.insert(0, "Sl No", range(1, len(df) + 1))
 
     st.markdown("---")
     col_btn1, col_btn2 = st.columns([6, 1])
@@ -161,12 +190,12 @@ if page == "1. Dashboard / Home":
       if st.button("🖨️ Print / PDF"):
         st.markdown(
             """
-                <script>
-                setTimeout(function() {
-                    window.print();
-                }, 500);
-                </script>
-                """,
+                    <script>
+                    setTimeout(function() {
+                        window.print();
+                    }, 500);
+                    </script>
+                    """,
             unsafe_allow_html=True,
         )
 
