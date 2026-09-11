@@ -661,5 +661,5 @@ elif page == "9. AKG Shutterings Ledger":
 
 
 # ================= PAGE 10: DAILY SITE & MANPOWER REPORT =================
-elif page == "10. Daily Site & Manpower Report":
+elif page == "10. Movone Infrastructure Private Limited "
   page10.run()
