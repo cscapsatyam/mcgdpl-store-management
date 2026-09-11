@@ -41,16 +41,17 @@ def find_column(df, possible_keywords):
   return None
 
 
-# --- Helper Function: PDF Generation ---
+# --- Helper Function: PDF A4 Landscape Layout & Perfect Alignment ---
 def generate_pdf_download(df, title="Store Inventory Report"):
   buffer = io.BytesIO()
+  # A4 Landscape with optimal margins
   doc = SimpleDocTemplate(
       buffer,
       pagesize=landscape(A4),
-      rightMargin=10,
-      leftMargin=10,
-      topMargin=15,
-      bottomMargin=15,
+      rightMargin=15,
+      leftMargin=15,
+      topMargin=20,
+      bottomMargin=20,
   )
   elements = []
 
@@ -59,9 +60,15 @@ def generate_pdf_download(df, title="Store Inventory Report"):
   title_style.fontSize = 12
   elements.append(Paragraph(f"<b>{title}</b>", title_style))
 
+  # Data formatting for PDF
   pdf_data = [df.columns.tolist()] + df.astype(str).values.tolist()
 
-  table = Table(pdf_data, repeatRows=1)
+  # A4 Landscape total width available roughly is 814 points. Dividing across columns:
+  num_cols = len(df.columns)
+  col_width = 780 / num_cols if num_cols > 0 else 50
+  col_widths = [col_width] * num_cols
+
+  table = Table(pdf_data, colWidths=col_widths, repeatRows=1)
   table.setStyle(
       TableStyle([
           ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#0d6efd")),
@@ -69,11 +76,11 @@ def generate_pdf_download(df, title="Store Inventory Report"):
           ("ALIGN", (0, 0), (-1, -1), "CENTER"),
           ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
           ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
-          ("FONTSIZE", (0, 0), (-1, -1), 6),
-          ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
-          ("TOPPADDING", (0, 0), (-1, -1), 4),
+          ("FONTSIZE", (0, 0), (-1, -1), 5.5),  # Compact font to fit A4
+          ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
+          ("TOPPADDING", (0, 0), (-1, -1), 3),
           ("BACKGROUND", (0, 1), (-1, -1), colors.HexColor("#f8f9fa")),
-          ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#cccccc")),
+          ("GRID", (0, 0), (-1, -1), 0.4, colors.HexColor("#cccccc")),
       ])
   )
 
@@ -129,9 +136,18 @@ if "current_df" not in st.session_state:
 
 if st.session_state.current_df.empty:
   try:
-    df_auto = pd.read_excel(GITHUB_EXCEL_URL, sheet_name=0, header=1)
+    # 📌 మీ ఎక్సెల్ ఫైల్ స్ట్రక్చర్ ప్రకారం హెడర్ రో ఎక్కడ ఉందో ఇక్కడ అడ్జస్ట్ చేసుకోవచ్చు (ఉదాహరణకు header=1 లేదా 2)
+    # ఒకవేళ నంబర్ల రో పోవాలంటే ఎక్సెల్ ఫైల్‌లో నేరుగా రో నంబర్ సెట్ చేయవచ్చు లేదా పైథాన్ ద్వారా ఆ రో ను తొలగించవచ్చు.
+    df_auto = pd.read_excel(GITHUB_EXCEL_URL, sheet_name=0, header=0)
 
-    # 1. Unnamed/ఖాళీ కాలమ్స్‌ని తొలగించడం
+    # మొదటి రో లో నంబర్లు ఉంటే వాటిని తొలగించి సరైన హెడర్‌ని సెట్ చేయడానికి:
+    if len(df_auto) > 0:
+      first_val = str(df_auto.columns[0])
+      if first_val.isdigit() or "Unnamed" in first_val:
+        # ఒకవేళ మొదటి రో హెడర్ కాకపోతే నెక్స్ట్ రో ని హెడర్‌గా మార్చుకోవడానికి రీ-రీడ్ చేస్తాం
+        df_auto = pd.read_excel(GITHUB_EXCEL_URL, sheet_name=0, header=1)
+
+    # 1. Unnamed/ఖాళీ కాలమ్స్‌ని పూర్తిగా తొలగించడం
     df_auto = df_auto.loc[
         :, ~df_auto.columns.astype(str).str.contains("^Unnamed", case=False)
     ]
@@ -141,7 +157,7 @@ if st.session_state.current_df.empty:
     if recv_col:
       df_auto = df_auto.drop(columns=[recv_col])
 
-    # 3. 00:00:00 టైమ్‌ను పూర్తిగా తొలగించి కేవలం తేదీ (YYYY-MM-DD) మాత్రమే ఉంచడానికి కోడ్
+    # 3. తేదీలలో 00:00:00 పూర్తిగా తొలగించి కేవలం తేదీ (YYYY-MM-DD) మాత్రమే ఉంచడం
     for col in df_auto.columns:
       if "date" in str(col).lower() or "dt" in str(col).lower():
         df_auto[col] = (
@@ -149,10 +165,8 @@ if st.session_state.current_df.empty:
             .dt.strftime("%Y-%m-%d")
             .fillna("")
         )
-        # ఒకవేళ నాట్-అప్లికబుల్ లేదా రాని చోట్ల 'NaT' లేదా '00:00:00' ఉంటే క్లీన్ చేయడానికి:
         df_auto[col] = df_auto[col].replace("NaT", "").replace("NaN", "")
       else:
-        # ఇతర కాలమ్స్‌లో ఎక్కడైనా '00:00:00' వస్తే దాన్ని ఖాళీగా లేదా క్లియర్ చేయడానికి
         df_auto[col] = (
             df_auto[col]
             .astype(str)
