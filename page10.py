@@ -4,8 +4,11 @@ import streamlit as st
 
 
 def run():
-  st.title("📊 SITE-CGD OFFICE BUILDING, MAHESHWARAM")
-  st.markdown("### PROJECT : MCGDPL6111 (MIPL) — Daily Staff & Manpower Report")
+  st.title("📊 SITE-CGD OFFICE BUILDING, MAHRESHWARAM")
+  st.markdown(
+      "### PROJECT : MCGDPL6111 (Movone Infrastructure Private Limited) —"
+      " Daily Staff & Manpower Report"
+  )
 
   # టాప్ డేట్ మరియు డే డిస్‌ప్లే
   col_h1, col_h2 = st.columns([2, 1])
@@ -101,7 +104,9 @@ def run():
     st.markdown("##### 1. Sub-Contractor Manpower")
     sub_data = [
         {
-            "Sub-Contractor Details": "Steel reinforcement, shuttering & concreting",
+            "Sub-Contractor Details": (
+                "Steel reinforcement, shuttering & concreting"
+            ),
             "Mr. NVVS Murthi": 13,
             "Mr. Keshava": 0,
         }
