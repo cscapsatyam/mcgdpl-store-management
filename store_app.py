@@ -158,10 +158,7 @@ page = st.radio(
         "8. Vendor Statement & Ledger",
         "9. AKG Shutterings Ledger",
         "10. Movone Infrastructure Private Limited "
-        "11. Movone Infrastructure Private Limited-2 "
-
-      
-    ],
+        ],
     horizontal=True,
 )
 
@@ -664,8 +661,4 @@ elif page == "9. AKG Shutterings Ledger":
 
 # ================= PAGE 10: DAILY SITE & MANPOWER REPORT =================
 elif page == "10. Movone Infrastructure Private Limited ":
-  page10.run()
-
-# ================= PAGE 11: DAILY SITE & MANPOWER REPORT =================
-     elif page == "10. Movone Infrastructure Private Limited-2 ":
   page10.run()
