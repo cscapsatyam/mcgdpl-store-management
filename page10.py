@@ -13,11 +13,10 @@ def run():
   if "mipl_records" not in st.session_state:
     st.session_state.mipl_records = []
 
-  # Retrieve master options if available
   supplier_options = (
       [s["Supplier Name"] for s in st.session_state.get("supplier_master", [])]
       if "supplier_master" in st.session_state
-      else []
+      else ["VENKATESHWARA TRADERS"]
   )
   material_options = (
       [
@@ -25,7 +24,7 @@ def run():
           for m in st.session_state.get("material_master", [])
       ]
       if "material_master" in st.session_state
-      else []
+      else ["CEMENT OPC 53 GRADE"]
   )
 
   tab_entry, tab_register, tab_summary = st.tabs(
@@ -44,42 +43,38 @@ def run():
       col1, col2, col3 = st.columns(3)
 
       with col1:
-        store_inward_no = st.text_input("Store Inward No")
-        supplier_name = (
-            st.selectbox("Supplier/Sender Name", supplier_options)
-            if supplier_options
-            else st.text_input("Supplier/Sender Name")
-        )
+        store_inward_no = st.text_input("Store Inward No", value="800")
+        supplier_name = st.selectbox("Supplier/Sender Name", supplier_options)
         invoice_no = st.text_input("Invoice/Delivery Challan No")
         entry_date = st.date_input("Date", datetime.date.today())
-        material_desc = (
-            st.selectbox("Description Of Material", material_options)
-            if material_options
-            else st.text_input("Description Of Material")
-        )
+        material_desc = st.selectbox("Description Of Material", material_options)
 
       with col2:
         uom = st.selectbox(
             "UOM", ["Bags", "Cu.M", "MT", "Nos", "Kgs", "Litres", "Bundles"]
         )
         received_qty = st.number_input(
-            "Received Qty", min_value=0.0, step=0.1, format="%.2f"
+            "Received Qty", min_value=0.0, step=0.1, value=50.0, format="%.2f"
         )
         basic_rate = st.number_input(
-            "Basic Rate", min_value=0.0, step=0.1, format="%.2f"
+            "Basic Rate", min_value=0.0, step=0.1, value=255.0, format="%.2f"
         )
 
-        # Tax percentage input (e.g., 18 for 18%)
+        # CGST + SGST Percentage Input
         tax_percentage = st.number_input(
-            "CGST + SGST (%)", min_value=0.0, max_value=100.0, step=0.5, value=0.0
+            "CGST + SGST (%)",
+            min_value=0.0,
+            max_value=100.0,
+            step=0.5,
+            value=18.0,
         )
 
       with col3:
         freight = st.number_input(
-            "Freight", min_value=0.0, step=0.1, format="%.2f"
+            "Freight", min_value=0.0, step=0.1, value=500.0, format="%.2f"
         )
 
-        # Automatic calculations
+        # CORRECT CALCULATION LOGIC
         base_amount = received_qty * basic_rate
         tax_amount = base_amount * (tax_percentage / 100.0)
         calculated_total_value = base_amount + tax_amount + freight
@@ -118,7 +113,7 @@ def run():
             "Remarks": remarks,
         }
         st.session_state.mipl_records.append(new_entry)
-        st.success("Entry added successfully with automatic tax calculation!")
+        st.success("Entry added successfully!")
 
   # --- TAB 2: STORE INWARD REGISTER ---
   with tab_register:
@@ -133,7 +128,7 @@ def run():
       )
       st.session_state.mipl_records = edited_df.to_dict("records")
     else:
-      st.info("No records added yet. Please use the Manual Entry Form tab.")
+      st.info("No records added yet.")
 
   # --- TAB 3: STOCK LEDGER SUMMARY ---
   with tab_summary:
@@ -158,4 +153,4 @@ def run():
         ]
         st.dataframe(summary_df, hide_index=True, use_container_width=True)
     else:
-      st.warning("No data available to generate summary.")
+      st.warning("No data available.")
