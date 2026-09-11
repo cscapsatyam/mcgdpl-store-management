@@ -157,7 +157,8 @@ page = st.radio(
         "7. Vendor Payments Entry",
         "8. Vendor Statement & Ledger",
         "9. AKG Shutterings Ledger",
-        "10. Daily Site & Manpower Report",
+        "10. Movone Infrastructure Private Limited "
+      
     ],
     horizontal=True,
 )
