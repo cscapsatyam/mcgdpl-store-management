@@ -41,15 +41,15 @@ def find_column(df, possible_keywords):
   return None
 
 
-# --- Helper Function: Professional PDF A4 Landscape Layout (Auto Text Wrapping & Spacing) ---
+# --- Helper Function: Professional PDF A4 Landscape Layout (Custom Widths for Wide Data) ---
 def generate_pdf_download(df, title="Store Inventory Report"):
   buffer = io.BytesIO()
-  # A4 Landscape with compact margins to give maximum space for wide table
+  # A4 Landscape with compact margins to maximize printable area
   doc = SimpleDocTemplate(
       buffer,
       pagesize=landscape(A4),
-      rightMargin=15,
-      leftMargin=15,
+      rightMargin=10,
+      leftMargin=10,
       topMargin=20,
       bottomMargin=20,
   )
@@ -61,14 +61,13 @@ def generate_pdf_download(df, title="Store Inventory Report"):
   elements.append(Paragraph(f"<b>{title}</b>", title_style))
   elements.append(Paragraph("<br/>", styles["Normal"]))
 
-  # Custom Paragraph Styles for Table Cells to enable Auto-Text-Wrapping (No Overlapping)
   header_cell_style = ParagraphStyle(
       "HeaderCell",
       parent=styles["Normal"],
       fontName="Helvetica-Bold",
-      fontSize=6.5,
-      leading=8,
-      alignment=1,  # Center alignment
+      fontSize=6,
+      leading=7.5,
+      alignment=1,
       textColor=colors.whitesmoke,
   )
 
@@ -76,22 +75,18 @@ def generate_pdf_download(df, title="Store Inventory Report"):
       "BodyCell",
       parent=styles["Normal"],
       fontName="Helvetica",
-      fontSize=6,
-      leading=7.5,
-      alignment=1,  # Center alignment
+      fontSize=5.5,
+      leading=7,
+      alignment=1,
       textColor=colors.HexColor("#222222"),
   )
 
-  # Convert all table text into Paragraphs so long text wraps automatically without crashing layout
   table_data = []
-
-  # Header Row
   header_row = [
       Paragraph(str(col), header_cell_style) for col in df.columns.tolist()
   ]
   table_data.append(header_row)
 
-  # Data Rows
   for _, row in df.iterrows():
     row_data = [
         Paragraph(str(val) if val is not None else "", body_cell_style)
@@ -99,22 +94,33 @@ def generate_pdf_download(df, title="Store Inventory Report"):
     ]
     table_data.append(row_data)
 
-  # Dynamic Column Width adjustment based on number of columns
+  # 📌 కాలమ్ పేరును బట్టి కస్టమ్ విడ్త్ కేటాయించడం (విశాలమైన టేబుల్స్ కోసం పర్ఫెక్ట్ సెటప్)
+  total_available_width = 822  # A4 Landscape available width
   num_cols = len(df.columns)
-  total_available_width = 812  # A4 Landscape width (841 - margins)
-  col_width = (
-      total_available_width / num_cols if num_cols > 0 else 50
-  )
-  col_widths = [col_width] * num_cols
+  col_widths = []
 
-  # Creating Table with explicit row/cell wrapping protection
+  for col in df.columns:
+    col_l = str(col).lower()
+    if "description" in col_l or "material" in col_l:
+      col_widths.append(85)  # మెటీరియల్ డిస్క్రిప్షన్‌కు ఎక్కువ వెడల్పు
+    elif "supplier" in col_l or "sender" in col_l:
+      col_widths.append(75)  # సప్లయర్ పేరుకు
+    elif "date" in col_l:
+      col_widths.append(45)  # డేట్స్‌కు చిన్నవిడ్త్ చాలు
+    elif "no" in col_l or "sl" in col_l:
+      col_widths.append(30)  # నంబర్స్‌కు
+    else:
+      col_widths.append(
+          max(40, total_available_width / num_cols)
+      )  # మిగతా వాటికి ఆటో-డిస్ట్రిబ్యూషన్
+
   table = Table(table_data, colWidths=col_widths, repeatRows=1)
   table.setStyle(
       TableStyle([
           ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#0d6efd")),
           ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-          ("BOTTOMPADDING", (0, 0), (-1, -1), 5),  # Adequate row height padding
-          ("TOPPADDING", (0, 0), (-1, -1), 5),
+          ("BOTTOMPADDING", (0, 0), (-1, -1), 4.5),
+          ("TOPPADDING", (0, 0), (-1, -1), 4.5),
           (
               "BACKGROUND",
               (0, 1),
@@ -122,13 +128,7 @@ def generate_pdf_download(df, title="Store Inventory Report"):
               colors.HexColor("#ffffff"),
           ),
           ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#fdfdfe")]),
-          (
-              "GRID",
-              (0, 0),
-              (-1, -1),
-              0.4,
-              colors.HexColor("#cccccc"),
-          ),  # Clean thin grid borders
+          ("GRID", (0, 0), (-1, -1), 0.3, colors.HexColor("#cccccc")),
       ])
   )
 
@@ -186,17 +186,13 @@ if st.session_state.current_df.empty:
   try:
     df_auto = pd.read_excel(GITHUB_EXCEL_URL, sheet_name=0, header=0)
 
-    # 1. Unnamed ఖాళీ కాలమ్స్‌ని తొలగించడం
     df_auto = df_auto.loc[
         :, ~df_auto.columns.astype(str).str.contains("^Unnamed", case=False)
     ]
-
-    # 2. 'Received Qty' కాలమ్ ఉంటే తొలగించడం
     recv_col = find_column(df_auto, ["Received Qty"])
     if recv_col:
       df_auto = df_auto.drop(columns=[recv_col])
 
-    # 3. డేట్స్ మరియు డెసిమల్ నంబర్స్ క్లీన్ చేయడం
     for col in df_auto.columns:
       col_lower = str(col).lower()
       if "date" in col_lower or "dt" in col_lower:
@@ -269,7 +265,6 @@ if page == "1. Dashboard / Home":
     else:
       df.insert(0, "Sl No", range(1, len(df) + 1))
 
-    # PDF Download Button
     pdf_bytes = generate_pdf_download(
         df, title="Complete Store Inventory Report"
     )
@@ -299,7 +294,6 @@ elif page == "2. Material Register View":
 
     col1, col2 = st.columns(2)
 
-    # 1. Supplier Filter
     supplier_col = find_column(
         df, ["Supplier/Sender Name", "Supplier", "Sender", "Vendor"]
     )
@@ -312,7 +306,6 @@ elif page == "2. Material Register View":
       if selected_supplier != "All":
         df = df[df[supplier_col] == selected_supplier]
 
-    # 2. Receipt Filter
     receipt_col = find_column(
         df,
         [
@@ -331,7 +324,6 @@ elif page == "2. Material Register View":
       if selected_receipt != "All":
         df = df[df[receipt_col] == selected_receipt]
 
-    # 3. Sub-Totals Calculation
     total_val_col = find_column(
         df,
         [
@@ -367,7 +359,7 @@ elif page == "2. Material Register View":
               .astype(str)
               .str.replace(r"[^\d.]", "", regex=True),
               errors="coerce",
-            )
+          )
           .fillna(0)
           .sum()
       )
@@ -387,7 +379,6 @@ elif page == "2. Material Register View":
 
     st.markdown("---")
 
-    # Filtered PDF Download Button
     pdf_bytes_filtered = generate_pdf_download(
         df, title=f"Material Register - Supplier: {selected_supplier}"
     )
