@@ -41,22 +41,23 @@ def find_column(df, possible_keywords):
   return None
 
 
-# --- Helper Function: Direct PDF Generate చేయడానికి ---
+# --- Helper Function: PDF A4 Landscape Layout & Clean Table Spacing ---
 def generate_pdf_download(df, title="Store Inventory Report"):
   buffer = io.BytesIO()
+  # A4 Landscape with proper margins to prevent messy lines
   doc = SimpleDocTemplate(
       buffer,
       pagesize=landscape(A4),
-      rightMargin=15,
-      leftMargin=15,
-      topMargin=20,
-      bottomMargin=20,
+      rightMargin=10,
+      leftMargin=10,
+      topMargin=15,
+      bottomMargin=15,
   )
   elements = []
 
   styles = getSampleStyleSheet()
   title_style = styles["Title"]
-  title_style.fontSize = 14
+  title_style.fontSize = 12
   elements.append(Paragraph(f"<b>{title}</b>", title_style))
 
   pdf_data = [df.columns.tolist()] + df.astype(str).values.tolist()
@@ -67,11 +68,19 @@ def generate_pdf_download(df, title="Store Inventory Report"):
           ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#0d6efd")),
           ("TEXTCOLOR", (0, 0), (-1, 0), colors.whitesmoke),
           ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+          ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
           ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
-          ("FONTSIZE", (0, 0), (-1, -1), 7),
-          ("BOTTOMPADDING", (0, 0), (-1, 0), 5),
+          ("FONTSIZE", (0, 0), (-1, -1), 6),  # Font size optimized for A4
+          ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+          ("TOPPADDING", (0, 0), (-1, -1), 4),
           ("BACKGROUND", (0, 1), (-1, -1), colors.HexColor("#f8f9fa")),
-          ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#cccccc")),
+          (
+              "GRID",
+              (0, 0),
+              (-1, -1),
+              0.5,
+              colors.HexColor("#cccccc"),
+          ),  # Clean lines
       ])
   )
 
@@ -81,7 +90,7 @@ def generate_pdf_download(df, title="Store Inventory Report"):
   return buffer.getvalue()
 
 
-# Custom ERP Styling & A4 Print Layout Adjustments
+# Custom ERP Styling
 st.markdown(
     """
     <style>
@@ -108,8 +117,6 @@ st.markdown(
         border-radius: 6px;
         box-shadow: 0 2px 4px rgba(0,0,0,0.05);
     }
-    
-    /* --- Print Styles for A4 Layout --- */
     @media print {
         header, footer, nav, .stSidebar, div[data-testid="stSidebar"] {
             display: none !important;
@@ -129,15 +136,15 @@ if "current_df" not in st.session_state:
 
 if st.session_state.current_df.empty:
   try:
-    # 1st row ను headers గా తీసుకుంటున్నాం (అందువల్ల ఎక్సెల్ లోని నంబర్ల రో తొలగిపోతుంది)
-    df_auto = pd.read_excel(GITHUB_EXCEL_URL, sheet_name=0, header=0)
+    # 📌 ఇక్కడ header=1 ఇచ్చాము, కాబట్టి ఆ నంబర్ల రో తొలగిపోయి హెడర్స్ కరెక్ట్ అవుతాయి
+    df_auto = pd.read_excel(GITHUB_EXCEL_URL, sheet_name=0, header=1)
 
     # 1. Unnamed/ఖాళీ కాలమ్స్‌ని పూర్తిగా తొలగించడానికి
     df_auto = df_auto.loc[
         :, ~df_auto.columns.astype(str).str.contains("^Unnamed", case=False)
     ]
 
-    # 2. 'Received Qty' కాలమ్ ఉంటే దాన్ని తొలగించడానికి (Drop Received Qty Column)
+    # 2. 'Received Qty' కాలమ్ ఉంటే దాన్ని తొలగించడానికి
     recv_col = find_column(df_auto, ["Received Qty"])
     if recv_col:
       df_auto = df_auto.drop(columns=[recv_col])
@@ -247,7 +254,7 @@ elif page == "2. Material Register View":
       if selected_receipt != "All":
         df = df[df[receipt_col] == selected_receipt]
 
-    # 3. Sub-Totals Calculation (Invoice Value ఆధారంగా)
+    # 3. Sub-Totals Calculation
     total_val_col = find_column(
         df,
         [
