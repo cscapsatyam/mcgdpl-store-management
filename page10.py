@@ -34,14 +34,7 @@ def run():
             "Contact Person": "Ramesh",
             "Phone": "9876543210",
             "GSTIN": "36AAAAA0000A1Z5",
-        },
-        {
-            "Sr No": 2,
-            "Supplier Name": "APARNA ENTERPRISES LIMITED",
-            "Contact Person": "Sales Desk",
-            "Phone": "9123456789",
-            "GSTIN": "36BBBBB1111B1Z6",
-        },
+        }
     ]
 
   if "material_master" not in st.session_state:
@@ -52,21 +45,25 @@ def run():
             "Material Description": "CEMENT OPC 53 GRADE",
             "Standard UOM": "Bags",
             "Category": "Cement & Binding",
-        },
-        {
-            "Sr No": 2,
-            "Material Code": "MAT-002",
-            "Material Description": "READY MIX CONCRETE",
-            "Standard UOM": "Cu.M",
-            "Category": "Concrete",
-        },
+        }
     ]
 
-  # --- All 6 Navigation Tabs ---
+  # Sub Contractor Master & Issue Records
+  if "subcontractor_master" not in st.session_state:
+    st.session_state.subcontractor_master = [
+        {"Sr No": 1, "Sub Contractor Name": "SRI VENKATA RAMANA WORKS"},
+        {"Sr No": 2, "Sub Contractor Name": "SHIVA CONSTRUCTIONS"},
+    ]
+
+  if "material_issue_records" not in st.session_state:
+    st.session_state.material_issue_records = []
+
+  # --- All 7 Navigation Tabs including Material Issue ---
   (
       tab_entry,
       tab_register,
       tab_summary,
+      tab_issue,
       tab_po,
       tab_supplier_master,
       tab_material_master,
@@ -75,6 +72,7 @@ def run():
           "➕ Manual Entry Form",
           "📦 Store Inward Register",
           "📈 Stock Ledger Summary",
+          "📤 Material Issue (Sub Contractor)",
           "📋 Supplier Order List",
           "🏢 Supplier Master",
           "🧱 Material Master",
@@ -85,6 +83,10 @@ def run():
   supplier_options = [s["Supplier Name"] for s in st.session_state.supplier_master]
   material_options = [
       m["Material Description"] for m in st.session_state.material_master
+  ]
+  subcontractor_options = [
+      sc["Sub Contractor Name"]
+      for sc in st.session_state.subcontractor_master
   ]
 
   # --- TAB 1: MANUAL ENTRY FORM ---
@@ -204,7 +206,71 @@ def run():
     else:
       st.warning("No data available.")
 
-  # --- TAB 4: SUPPLIER ORDER LIST ---
+  # --- TAB 4: MATERIAL ISSUE (SUB CONTRACTOR) ---
+  with tab_issue:
+    st.markdown("### 📤 Material Issue to Sub Contractors")
+    with st.form("material_issue_form", clear_on_submit=True):
+      ic1, ic2, ic3 = st.columns(3)
+      with ic1:
+        issue_date = st.date_input("Issue Date", datetime.date.today())
+        subcontractor_name = (
+            st.selectbox("Sub Contractor Name", subcontractor_options)
+            if subcontractor_options
+            else st.text_input("Sub Contractor Name")
+        )
+      with ic2:
+        issue_material = (
+            st.selectbox("Description Of Material", material_options)
+            if material_options
+            else st.text_input("Description Of Material")
+        )
+        issue_uom = st.selectbox(
+            "UOM",
+            [
+                "Bags",
+                "Cu.M",
+                "MT",
+                "Nos",
+                "Kgs",
+                "Litres",
+                "Bundles",
+            ],
+            key="issue_uom",
+        )
+      with ic3:
+        issued_qty = st.number_input(
+            "Issued Qty", min_value=0.0, step=0.1, format="%.2f"
+        )
+        purpose = st.text_input("Purpose / Work Description")
+        st.write("")
+        issue_submitted = st.form_submit_button("💾 Save Material Issue")
+
+      if issue_submitted:
+        new_issue_sr = len(st.session_state.material_issue_records) + 1
+        st.session_state.material_issue_records.append({
+            "Sr No": new_issue_sr,
+            "Issue Date": issue_date,
+            "Sub Contractor Name": subcontractor_name,
+            "Description Of Material": issue_material,
+            "UOM": issue_uom,
+            "Issued Qty": issued_qty,
+            "Purpose": purpose,
+        })
+        st.success("Material issued successfully to Sub Contractor!")
+
+    if st.session_state.material_issue_records:
+      st.markdown("### 📋 Issued Materials Register")
+      issue_df = pd.DataFrame(st.session_state.material_issue_records)
+      edited_issue_df = st.data_editor(
+          issue_df, hide_index=True, use_container_width=True, key="issue_editor"
+      )
+      st.session_state.material_issue_records = edited_issue_df.to_dict(
+          "records"
+      )
+    else:
+      st.info("No material issues recorded yet.")
+
+  # --- TAB 5: SUPPLIER ORDER LIST ---
   with tab_po:
     st.markdown("### 📋 Supplier Order List (Purchase Orders)")
     with st.form("po_entry_form", clear_on_submit=True):
@@ -241,7 +307,7 @@ def run():
       )
       st.session_state.po_records = edited_po_df.to_dict("records")
 
-  # --- TAB 5: SUPPLIER MASTER ---
+  # --- TAB 6: SUPPLIER MASTER ---
   with tab_supplier_master:
     st.markdown("### 🏢 Supplier Master Data")
     with st.form("supplier_add_form", clear_on_submit=True):
@@ -277,7 +343,7 @@ def run():
       )
       st.session_state.supplier_master = edited_sup_df.to_dict("records")
 
-  # --- TAB 6: MATERIAL MASTER ---
+  # --- TAB 7: MATERIAL MASTER ---
   with tab_material_master:
     st.markdown("### 🧱 Material Master Data")
     with st.form("material_add_form", clear_on_submit=True):
