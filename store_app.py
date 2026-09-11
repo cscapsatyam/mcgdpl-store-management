@@ -7,8 +7,10 @@ from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.platypus import Paragraph, SimpleDocTemplate, Table, TableStyle
 import streamlit as st
 
-# 🔗 మీ GitHub Raw Excel లింక్ ఆటోమేటిక్‌గా సెట్ చేయబడింది
-GITHUB_EXCEL_URL = "https://raw.githubusercontent.com/cscapsatyam/mcgdpl-store-management/main/BookA1.xlsx"
+# 🔗 మీ GitHub Raw Excel లింక్
+GITHUB_EXCEL_URL = (
+    "https://raw.githubusercontent.com/cscapsatyam/mcgdpl-store-management/main/BookA1.xlsx"
+)
 
 st.set_page_config(
     page_title="Movone Infrastructure Private Limited", layout="wide"
@@ -111,13 +113,23 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-# Initialize Session State & GitHub నుండి డేటా ఆటోమేటిక్‌గా లోడ్ చేయడం
+# Initialize Session State & GitHub నుండి డేటా లోడ్ చేయడం
 if "current_df" not in st.session_state:
   st.session_state.current_df = pd.DataFrame()
 
 if st.session_state.current_df.empty:
   try:
     df_auto = pd.read_excel(GITHUB_EXCEL_URL, sheet_name=0)
+
+    # --- తేదీలలో ఉన్న 00:00:00 (Time) ను తొలగించి కేవలం Date మాత్రమే ఉంచడానికి కోడ్ ---
+    for col in df_auto.columns:
+      if (
+          "date" in str(col).lower()
+          or "dt" in str(col).lower()
+          or "received" in str(col).lower()
+      ):
+        df_auto[col] = pd.to_datetime(df_auto[col], errors="coerce").dt.date
+
     st.session_state.current_df = df_auto
   except Exception as e:
     st.warning(
@@ -189,6 +201,13 @@ if page == "1. Dashboard / Home":
     if uploaded_file is not None:
       try:
         df = pd.read_excel(uploaded_file, sheet_name=0)
+        for col in df.columns:
+          if (
+              "date" in str(col).lower()
+              or "dt" in str(col).lower()
+              or "received" in str(col).lower()
+          ):
+            df[col] = pd.to_datetime(df[col], errors="coerce").dt.date
         st.session_state.current_df = df
         st.rerun()
       except Exception as e:
