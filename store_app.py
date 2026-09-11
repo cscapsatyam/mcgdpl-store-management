@@ -9,7 +9,6 @@ st.set_page_config(
 
 # --- Helper Function: Column Names Flexibly Find చేయడానికి ---
 def find_column(df, possible_keywords):
-  """Excel లో స్పేస్‌లు, కేస్ తేడాలు ఉన్నా సరైన Column Name ని గుర్తించే ఫంక్షన్"""
   for col in df.columns:
     clean_col = (
         str(col)
@@ -132,68 +131,34 @@ st.markdown(
 
 page = st.radio(
     "Navigation Menu",
-    ["1. Dashboard / Home"],
+    ["1. Dashboard / Home", "2. Material Register View"],
     horizontal=True,
 )
 
 st.markdown("---")
 
-# ================= PAGE 1: HOME =================
+# ================= PAGE 1: HOME (NO FILTERS) =================
 if page == "1. Dashboard / Home":
   st.title("📦 Store Management Dashboard")
-  st.markdown("Overview of store inventory and receipt records.")
+  st.markdown("Overview of complete store inventory records.")
 
   if not st.session_state.current_df.empty:
     df = st.session_state.current_df.copy()
 
-    col1, col2 = st.columns(2)
-
-    # Dynamic Matching for Supplier Column
-    supplier_col = find_column(
-        df, ["Supplier/Sender Name", "Supplier", "Sender", "Vendor"]
-    )
-    if supplier_col:
-      suppliers = ["All"] + list(df[supplier_col].dropna().unique())
-      selected_supplier = col1.selectbox("Filter by Supplier Name:", suppliers)
-      if selected_supplier != "All":
-        df = df[df[supplier_col] == selected_supplier]
-
-    # Dynamic Matching for Receipt Type Column
-    receipt_col = find_column(
-        df,
-        [
-            "Vehicle No.Type of Receipt",
-            "Type of Receipt",
-            "Receipt Type",
-            "Receipt",
-            "Reciept",
-        ],
-    )
-    if receipt_col:
-      receipts = ["All"] + list(df[receipt_col].dropna().unique())
-      selected_receipt = col2.selectbox("Filter by Receipt Type:", receipts)
-      if selected_receipt != "All":
-        df = df[df[receipt_col] == selected_receipt]
-
     df = df.reset_index(drop=True)
-
-    # Dynamic Matching for Serial Number Column
     sl_col = find_column(df, ["Sl No", "S.No", "SlNo", "SNo", "Serial No"])
     if sl_col:
       df[sl_col] = range(1, len(df) + 1)
     else:
       df.insert(0, "Sl No", range(1, len(df) + 1))
 
-    st.markdown("---")
     col_btn1, col_btn2 = st.columns([6, 1])
     with col_btn2:
-      if st.button("🖨️ Print / PDF"):
+      if st.button("🖨️ Print / PDF", key="print_page1"):
         st.markdown(
             """
                     <script>
-                    setTimeout(function() {
-                        window.print();
-                    }, 500);
+                    setTimeout(function() { window.print(); }, 500);
                     </script>
                     """,
             unsafe_allow_html=True,
@@ -218,3 +183,122 @@ if page == "1. Dashboard / Home":
         st.rerun()
       except Exception as e:
         st.error(f"Error loading file: {e}")
+
+# ================= PAGE 2: MATERIAL REGISTER VIEW (WITH FILTERS & SUB-TOTAL) =================
+elif page == "2. Material Register View":
+  st.title("📋 Material Register View")
+  st.markdown("Filter material records and view supplier sub-totals.")
+
+  if not st.session_state.current_df.empty:
+    df = st.session_state.current_df.copy()
+
+    col1, col2 = st.columns(2)
+
+    # 1. Supplier Name Filter
+    supplier_col = find_column(
+        df, ["Supplier/Sender Name", "Supplier", "Sender", "Vendor"]
+    )
+    selected_supplier = "All"
+    if supplier_col:
+      suppliers = ["All"] + list(df[supplier_col].dropna().unique())
+      selected_supplier = col1.selectbox(
+          "Filter by Supplier Name:", suppliers, key="page2_supplier"
+      )
+      if selected_supplier != "All":
+        df = df[df[supplier_col] == selected_supplier]
+
+    # 2. Receipt Type Filter
+    receipt_col = find_column(
+        df,
+        [
+            "Vehicle No.Type of Receipt",
+            "Type of Receipt",
+            "Receipt Type",
+            "Receipt",
+            "Reciept",
+        ],
+    )
+    if receipt_col:
+      receipts = ["All"] + list(df[receipt_col].dropna().unique())
+      selected_receipt = col2.selectbox(
+          "Filter by Receipt Type:", receipts, key="page2_receipt"
+      )
+      if selected_receipt != "All":
+        df = df[df[receipt_col] == selected_receipt]
+
+    # 3. Sub-Total Calculations
+    total_val_col = find_column(
+        df,
+        [
+            "Total Invoie Value",
+            "Total Invoice Value",
+            "Invoice Basic Total Value",
+            "Total Amount",
+            "Amount",
+            "Value",
+        ],
+    )
+    qty_col = find_column(
+        df, ["Received Qty", "Invoice/Delivery Challan Qty", "Qty", "Quantity"]
+    )
+
+    sub_total_val = 0.0
+    total_qty = 0.0
+
+    if total_val_col and total_val_col in df.columns:
+      sub_total_val = (
+          pd.to_numeric(
+              df[total_val_col].astype(str).str.replace(r"[^\d.]", "", regex=True),
+              errors="coerce",
+          )
+          .fillna(0)
+          .sum()
+      )
+
+    if qty_col and qty_col in df.columns:
+      total_qty = (
+          pd.to_numeric(
+              df[qty_col].astype(str).str.replace(r"[^\d.]", "", regex=True),
+              errors="coerce",
+          )
+          .fillna(0)
+          .sum()
+      )
+
+    # Display Sub-Total Metrics
+    st.markdown("---")
+    m1, m2, m3 = st.columns(3)
+    m1.metric("Selected Supplier", selected_supplier)
+    m2.metric("Sub-Total Value", f"₹ {sub_total_val:,.2f}")
+    m3.metric("Total Received Qty", f"{total_qty:,.2f}")
+
+    df = df.reset_index(drop=True)
+    sl_col = find_column(df, ["Sl No", "S.No", "SlNo", "SNo", "Serial No"])
+    if sl_col:
+      df[sl_col] = range(1, len(df) + 1)
+    else:
+      df.insert(0, "Sl No", range(1, len(df) + 1))
+
+    st.markdown("---")
+    col_b1, col_b2 = st.columns([6, 1])
+    with col_b2:
+      if st.button("🖨️ Print / PDF", key="print_page2"):
+        st.markdown(
+            """
+                    <script>
+                    setTimeout(function() { window.print(); }, 500);
+                    </script>
+                    """,
+            unsafe_allow_html=True,
+        )
+
+    calc_height = min(max(len(df) * 38 + 40, 150), 500)
+    st.data_editor(
+        df,
+        hide_index=True,
+        use_container_width=True,
+        disabled=True,
+        height=calc_height,
+    )
+  else:
+    st.info("Please upload or load Excel data source first.")
