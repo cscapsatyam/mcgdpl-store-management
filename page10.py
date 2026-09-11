@@ -50,13 +50,17 @@ def run():
 
   if "subcontractor_master" not in st.session_state:
     st.session_state.subcontractor_master = [
-        {"Sr No": 1, "Sub Contractor Name": "SRI VENKATA RAMANA WORKS"}
+        {
+            "Sr No": 1,
+            "Sub Contractor Name": "SRI VENKATA RAMANA WORKS",
+            "Phone": "9888877777",
+        }
     ]
 
   if "material_issue_records" not in st.session_state:
     st.session_state.material_issue_records = []
 
-  # --- Navigation Tabs ---
+  # --- Navigation Tabs (Separated Masters) ---
   (
       tab_entry,
       tab_register,
@@ -64,18 +68,20 @@ def run():
       tab_po_status,
       tab_issue,
       tab_po,
-      tab_supplier_master,
-      tab_material_master,
+      tab_sup_master,
+      tab_mat_master,
+      tab_sub_master,
   ) = st.tabs(
       [
-          "➕ Manual Entry Form",
-          "📦 Store Inward Register",
-          "📈 Stock Ledger Summary",
-          "📊 PO Status & Tracking",
+          "➕ Manual Entry",
+          "📦 Inward Register",
+          "📈 Stock Ledger",
+          "📊 PO Status",
           "📤 Material Issue",
-          "📋 Supplier Order List",
+          "📋 Purchase Orders",
           "🏢 Supplier Master",
           "🧱 Material Master",
+          "👷 Subcontractor Master",
       ]
   )
 
@@ -94,16 +100,13 @@ def run():
   # --- TAB 1: MANUAL ENTRY FORM ---
   with tab_entry:
     st.markdown("### 📝 Add New Store Inward Entry")
-
-    # PO selection outside the form to allow dynamic auto-filling without form errors
     selected_po = st.selectbox(
         "Select Purchase Order (Optional - Auto-fills Supplier & Material)",
         po_options,
     )
 
-    # Get default values based on selected PO
-    default_supplier = supplier_options[0]
-    default_material = material_options[0]
+    default_supplier = supplier_options[0] if supplier_options else ""
+    default_material = material_options[0] if material_options else ""
 
     if selected_po != "None / Direct Receipt":
       matched_po = next(
@@ -304,12 +307,16 @@ def run():
       ic1, ic2, ic3 = st.columns(3)
       with ic1:
         issue_date = st.date_input("Issue Date", datetime.date.today())
-        subcontractor_name = st.selectbox(
-            "Sub Contractor Name", subcontractor_options
+        subcontractor_name = (
+            st.selectbox("Sub Contractor Name", subcontractor_options)
+            if subcontractor_options
+            else st.text_input("Sub Contractor Name")
         )
       with ic2:
-        issue_material = st.selectbox(
-            "Description Of Material", material_options
+        issue_material = (
+            st.selectbox("Description Of Material", material_options)
+            if material_options
+            else st.text_input("Description Of Material")
         )
         issue_uom = st.selectbox(
             "UOM",
@@ -346,7 +353,7 @@ def run():
           "records"
       )
 
-  # --- TAB 6: SUPPLIER ORDER LIST ---
+  # --- TAB 6: PURCHASE ORDERS ---
   with tab_po:
     st.markdown("### 📋 Supplier Order List (Purchase Orders)")
     with st.form("po_entry_form", clear_on_submit=True):
@@ -383,9 +390,9 @@ def run():
       )
       st.session_state.po_records = edited_po_df.to_dict("records")
 
-  # --- TAB 7: SUPPLIER MASTER ---
-  with tab_supplier_master:
-    st.markdown("### 🏢 Supplier Master Data")
+  # --- TAB 7: SUPPLIER MASTER (Dedicated Tab) ---
+  with tab_sup_master:
+    st.markdown("### 🏢 Supplier Master Management")
     with st.form("supplier_add_form", clear_on_submit=True):
       sc1, sc2, sc3 = st.columns(3)
       with sc1:
@@ -396,7 +403,7 @@ def run():
         s_gstin = st.text_input("GSTIN")
       with sc3:
         st.write("")
-        s_submitted = st.form_submit_button("➕ Add Supplier")
+        s_submitted = st.form_submit_button("➕ Add New Supplier")
 
       if s_submitted:
         new_s_sr = len(st.session_state.supplier_master) + 1
@@ -419,9 +426,9 @@ def run():
       )
       st.session_state.supplier_master = edited_sup_df.to_dict("records")
 
-  # --- TAB 8: MATERIAL MASTER ---
-  with tab_material_master:
-    st.markdown("### 🧱 Material Master Data")
+  # --- TAB 8: MATERIAL MASTER (Dedicated Tab) ---
+  with tab_mat_master:
+    st.markdown("### 🧱 Material Master Management")
     with st.form("material_add_form", clear_on_submit=True):
       mc1, mc2, mc3 = st.columns(3)
       with mc1:
@@ -435,7 +442,7 @@ def run():
         m_cat = st.text_input("Category")
       with mc3:
         st.write("")
-        m_submitted = st.form_submit_button("➕ Add Material")
+        m_submitted = st.form_submit_button("➕ Add New Material")
 
       if m_submitted:
         new_m_sr = len(st.session_state.material_master) + 1
@@ -457,3 +464,34 @@ def run():
           key="material_master_editor",
       )
       st.session_state.material_master = edited_mat_df.to_dict("records")
+
+  # --- TAB 9: SUBCONTRACTOR MASTER (Dedicated Tab) ---
+  with tab_sub_master:
+    st.markdown("### 👷 Subcontractor Master Management")
+    with st.form("subcontractor_add_form", clear_on_submit=True):
+      subc1, subc2 = st.columns(2)
+      with subc1:
+        sub_name = st.text_input("Sub Contractor Name")
+      with subc2:
+        sub_phone = st.text_input("Phone Number")
+      
+      sub_submitted = st.form_submit_button("➕ Add New Subcontractor")
+
+      if sub_submitted:
+        new_sub_sr = len(st.session_state.subcontractor_master) + 1
+        st.session_state.subcontractor_master.append({
+            "Sr No": new_sub_sr,
+            "Sub Contractor Name": sub_name,
+            "Phone": sub_phone,
+        })
+        st.success("Subcontractor added successfully!")
+
+    if st.session_state.subcontractor_master:
+      sub_df = pd.DataFrame(st.session_state.subcontractor_master)
+      edited_sub_df = st.data_editor(
+          sub_df,
+          hide_index=True,
+          use_container_width=True,
+          key="subcontractor_master_editor",
+      )
+      st.session_state.subcontractor_master = edited_sub_df.to_dict("records")
