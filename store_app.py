@@ -41,7 +41,7 @@ def find_column(df, possible_keywords):
   return None
 
 
-# --- Helper Function: Professional PDF A4 Landscape Layout (Custom Widths for Wide Data) ---
+# --- Helper Function: Professional PDF A4 Landscape Layout (CGST/SGST Widths Optimized) ---
 def generate_pdf_download(df, title="Store Inventory Report"):
   buffer = io.BytesIO()
   # A4 Landscape with compact margins to maximize printable area
@@ -94,7 +94,7 @@ def generate_pdf_download(df, title="Store Inventory Report"):
     ]
     table_data.append(row_data)
 
-  # 📌 కాలమ్ పేరును బట్టి కస్టమ్ విడ్త్ కేటాయించడం (విశాలమైన టేబుల్స్ కోసం పర్ఫెక్ట్ సెటప్)
+  # 📌 కాలమ్ పేరును బట్టి కస్టమ్ విడ్త్ (CGST & SGST విడ్త్ తగ్గించబడింది)
   total_available_width = 822  # A4 Landscape available width
   num_cols = len(df.columns)
   col_widths = []
@@ -102,16 +102,20 @@ def generate_pdf_download(df, title="Store Inventory Report"):
   for col in df.columns:
     col_l = str(col).lower()
     if "description" in col_l or "material" in col_l:
-      col_widths.append(85)  # మెటీరియల్ డిస్క్రిప్షన్‌కు ఎక్కువ వెడల్పు
+      col_widths.append(95)  # మెటీరియల్ డిస్క్రిప్షన్‌కు మరింత ఎక్కువ వెడల్పు
     elif "supplier" in col_l or "sender" in col_l:
-      col_widths.append(75)  # సప్లయర్ పేరుకు
+      col_widths.append(80)  # సప్లయర్ పేరుకు
+    elif "cgst" in col_l or "sgst" in col_l:
+      col_widths.append(
+          22
+      )  # 📌 CGST & SGST కాలమ్స్ చాలా చిన్నవిగా (తగ్గించబడ్డాయి)
     elif "date" in col_l:
-      col_widths.append(45)  # డేట్స్‌కు చిన్నవిడ్త్ చాలు
+      col_widths.append(42)  # డేట్స్‌కు
     elif "no" in col_l or "sl" in col_l:
-      col_widths.append(30)  # నంబర్స్‌కు
+      col_widths.append(28)  # నంబర్స్‌కు
     else:
       col_widths.append(
-          max(40, total_available_width / num_cols)
+          max(35, total_available_width / num_cols)
       )  # మిగతా వాటికి ఆటో-డిస్ట్రిబ్యూషన్
 
   table = Table(table_data, colWidths=col_widths, repeatRows=1)
