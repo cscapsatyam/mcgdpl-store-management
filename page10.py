@@ -48,21 +48,20 @@ def run():
         }
     ]
 
-  # Sub Contractor Master & Issue Records
   if "subcontractor_master" not in st.session_state:
     st.session_state.subcontractor_master = [
-        {"Sr No": 1, "Sub Contractor Name": "SRI VENKATA RAMANA WORKS"},
-        {"Sr No": 2, "Sub Contractor Name": "SHIVA CONSTRUCTIONS"},
+        {"Sr No": 1, "Sub Contractor Name": "SRI VENKATA RAMANA WORKS"}
     ]
 
   if "material_issue_records" not in st.session_state:
     st.session_state.material_issue_records = []
 
-  # --- All 7 Navigation Tabs including Material Issue ---
+  # --- Navigation Tabs ---
   (
       tab_entry,
       tab_register,
       tab_summary,
+      tab_po_status,
       tab_issue,
       tab_po,
       tab_supplier_master,
@@ -72,14 +71,15 @@ def run():
           "➕ Manual Entry Form",
           "📦 Store Inward Register",
           "📈 Stock Ledger Summary",
-          "📤 Material Issue (Sub Contractor)",
+          "📊 PO Status & Tracking",
+          "📤 Material Issue",
           "📋 Supplier Order List",
           "🏢 Supplier Master",
           "🧱 Material Master",
       ]
   )
 
-  # Dropdown options extracted from masters
+  # Dropdown options extracted from masters & POs
   supplier_options = [s["Supplier Name"] for s in st.session_state.supplier_master]
   material_options = [
       m["Material Description"] for m in st.session_state.material_master
@@ -88,22 +88,28 @@ def run():
       sc["Sub Contractor Name"]
       for sc in st.session_state.subcontractor_master
   ]
+  po_options = ["None / Direct Receipt"] + [
+      po["Purchase Order No"] for po in st.session_state.po_records
+  ]
 
-  # --- TAB 1: MANUAL ENTRY FORM ---
+  # --- TAB 1: MANUAL ENTRY FORM (Linked with PO Dropdown) ---
   with tab_entry:
-    st.markdown("### 📝 Add New Store Inward Entry")
+    st.markdown("### 📝 Add New Store Inward Entry (Linked with PO)")
 
     with st.form("manual_entry_form", clear_on_submit=True):
       col1, col2, col3 = st.columns(3)
 
       with col1:
         store_inward_no = st.text_input("Store Inward No")
+        selected_po = st.selectbox(
+            "Select Purchase Order (Optional)", po_options
+        )
         supplier_name = st.selectbox("Supplier/Sender Name", supplier_options)
         invoice_no = st.text_input("Invoice/Delivery Challan No")
         entry_date = st.date_input("Date", datetime.date.today())
-        material_desc = st.selectbox("Description Of Material", material_options)
 
       with col2:
+        material_desc = st.selectbox("Description Of Material", material_options)
         uom = st.selectbox(
             "UOM", ["Bags", "Cu.M", "MT", "Nos", "Kgs", "Litres", "Bundles"]
         )
@@ -113,6 +119,8 @@ def run():
         basic_rate = st.number_input(
             "Basic Rate", min_value=0.0, step=0.1, format="%.2f"
         )
+
+      with col3:
         tax_percentage = st.number_input(
             "CGST + SGST (%)",
             min_value=0.0,
@@ -120,8 +128,6 @@ def run():
             step=0.5,
             value=18.0,
         )
-
-      with col3:
         freight = st.number_input(
             "Freight", min_value=0.0, step=0.1, format="%.2f"
         )
@@ -130,10 +136,7 @@ def run():
         tax_amount = base_amount * (tax_percentage / 100.0)
         calculated_total_value = base_amount + tax_amount + freight
 
-        st.markdown(f"**Calculation Breakdown:**")
-        st.text(f"Base Amount: ₹ {base_amount:,.2f}")
-        st.text(f"Tax Value ({tax_percentage}%): ₹ {tax_amount:,.2f}")
-        st.info(f"**Total Invoice Value: ₹ {calculated_total_value:,.2f}**")
+        st.markdown(f"**Total Value:** ₹ {calculated_total_value:,.2f}")
 
         vehicle_no = st.text_input("Vehicle No")
         type_of_receipt = st.selectbox(
@@ -148,6 +151,7 @@ def run():
         new_entry = {
             "Sr No": new_sr_no,
             "Store Inward No": store_inward_no,
+            "Purchase Order No": selected_po,
             "Supplier/Sender Name": supplier_name,
             "Invoice/Delivery Challan No": invoice_no,
             "Date": entry_date,
@@ -164,7 +168,7 @@ def run():
             "Remarks": remarks,
         }
         st.session_state.mipl_records.append(new_entry)
-        st.success("Entry added successfully!")
+        st.success("Entry added successfully with PO linkage!")
 
   # --- TAB 2: STORE INWARD REGISTER ---
   with tab_register:
@@ -206,35 +210,85 @@ def run():
     else:
       st.warning("No data available.")
 
-  # --- TAB 4: MATERIAL ISSUE (SUB CONTRACTOR) ---
+  # --- TAB 4: PO STATUS & TRACKING ---
+  with tab_po_status:
+    st.markdown("### 📊 Purchase Order Status & Tracking")
+    st.info(
+        "Compare total ordered quantity against total received quantity per"
+        " Purchase Order."
+    )
+
+    if st.session_state.po_records:
+      po_df = pd.DataFrame(st.session_state.po_records)
+
+      # Calculate received quantity per PO from store inward records
+      if st.session_state.mipl_records:
+        inward_df = pd.DataFrame(st.session_state.mipl_records)
+        if "Purchase Order No" in inward_df.columns:
+          received_summary = (
+              inward_df.groupby("Purchase Order No")["Received Qty"]
+              .sum()
+              .reset_index()
+          )
+          po_status_df = pd.merge(
+              po_df,
+              received_summary,
+              on="Purchase Order No",
+              how="left",
+          ).fillna({"Received Qty": 0.0})
+        else:
+          po_status_df = po_df.copy()
+          po_status_df["Received Qty"] = 0.0
+      else:
+        po_status_df = po_df.copy()
+        po_status_df["Received Qty"] = 0.0
+
+      # Calculate Pending Quantity & Status
+      po_status_df["Pending Qty"] = (
+          po_status_df["Qty of Order"] - po_status_df["Received Qty"]
+      )
+      po_status_df["Status"] = po_status_df.apply(
+          lambda row: "Completed"
+          if row["Pending Qty"] <= 0
+          else ("Partially Received" if row["Received Qty"] > 0 else "Pending"),
+          axis=1,
+      )
+
+      st.dataframe(
+          po_status_df[
+              [
+                  "Purchase Order No",
+                  "Supplier Name",
+                  "Material Description",
+                  "Qty of Order",
+                  "Received Qty",
+                  "Pending Qty",
+                  "Status",
+              ]
+          ],
+          hide_index=True,
+          use_container_width=True,
+      )
+    else:
+      st.info("No Purchase Orders available to track.")
+
+  # --- TAB 5: MATERIAL ISSUE ---
   with tab_issue:
     st.markdown("### 📤 Material Issue to Sub Contractors")
     with st.form("material_issue_form", clear_on_submit=True):
       ic1, ic2, ic3 = st.columns(3)
       with ic1:
         issue_date = st.date_input("Issue Date", datetime.date.today())
-        subcontractor_name = (
-            st.selectbox("Sub Contractor Name", subcontractor_options)
-            if subcontractor_options
-            else st.text_input("Sub Contractor Name")
+        subcontractor_name = st.selectbox(
+            "Sub Contractor Name", subcontractor_options
         )
       with ic2:
-        issue_material = (
-            st.selectbox("Description Of Material", material_options)
-            if material_options
-            else st.text_input("Description Of Material")
+        issue_material = st.selectbox(
+            "Description Of Material", material_options
         )
         issue_uom = st.selectbox(
             "UOM",
-            [
-                "Bags",
-                "Cu.M",
-                "MT",
-                "Nos",
-                "Kgs",
-                "Litres",
-                "Bundles",
-            ],
+            ["Bags", "Cu.M", "MT", "Nos", "Kgs", "Litres", "Bundles"],
             key="issue_uom",
         )
       with ic3:
@@ -256,10 +310,9 @@ def run():
             "Issued Qty": issued_qty,
             "Purpose": purpose,
         })
-        st.success("Material issued successfully to Sub Contractor!")
+        st.success("Material issued successfully!")
 
     if st.session_state.material_issue_records:
-      st.markdown("### 📋 Issued Materials Register")
       issue_df = pd.DataFrame(st.session_state.material_issue_records)
       edited_issue_df = st.data_editor(
           issue_df, hide_index=True, use_container_width=True, key="issue_editor"
@@ -267,10 +320,8 @@ def run():
       st.session_state.material_issue_records = edited_issue_df.to_dict(
           "records"
       )
-    else:
-      st.info("No material issues recorded yet.")
 
-  # --- TAB 5: SUPPLIER ORDER LIST ---
+  # --- TAB 6: SUPPLIER ORDER LIST ---
   with tab_po:
     st.markdown("### 📋 Supplier Order List (Purchase Orders)")
     with st.form("po_entry_form", clear_on_submit=True):
@@ -307,7 +358,7 @@ def run():
       )
       st.session_state.po_records = edited_po_df.to_dict("records")
 
-  # --- TAB 6: SUPPLIER MASTER ---
+  # --- TAB 7: SUPPLIER MASTER ---
   with tab_supplier_master:
     st.markdown("### 🏢 Supplier Master Data")
     with st.form("supplier_add_form", clear_on_submit=True):
@@ -343,7 +394,7 @@ def run():
       )
       st.session_state.supplier_master = edited_sup_df.to_dict("records")
 
-  # --- TAB 7: MATERIAL MASTER ---
+  # --- TAB 8: MATERIAL MASTER ---
   with tab_material_master:
     st.markdown("### 🧱 Material Master Data")
     with st.form("material_add_form", clear_on_submit=True):
