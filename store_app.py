@@ -41,10 +41,9 @@ def find_column(df, possible_keywords):
   return None
 
 
-# --- Helper Function: PDF A4 Landscape Layout & Clean Table Spacing ---
+# --- Helper Function: PDF Generation ---
 def generate_pdf_download(df, title="Store Inventory Report"):
   buffer = io.BytesIO()
-  # A4 Landscape with proper margins to prevent messy lines
   doc = SimpleDocTemplate(
       buffer,
       pagesize=landscape(A4),
@@ -70,17 +69,11 @@ def generate_pdf_download(df, title="Store Inventory Report"):
           ("ALIGN", (0, 0), (-1, -1), "CENTER"),
           ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
           ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
-          ("FONTSIZE", (0, 0), (-1, -1), 6),  # Font size optimized for A4
+          ("FONTSIZE", (0, 0), (-1, -1), 6),
           ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
           ("TOPPADDING", (0, 0), (-1, -1), 4),
           ("BACKGROUND", (0, 1), (-1, -1), colors.HexColor("#f8f9fa")),
-          (
-              "GRID",
-              (0, 0),
-              (-1, -1),
-              0.5,
-              colors.HexColor("#cccccc"),
-          ),  # Clean lines
+          ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#cccccc")),
       ])
   )
 
@@ -136,23 +129,37 @@ if "current_df" not in st.session_state:
 
 if st.session_state.current_df.empty:
   try:
-    # 📌 ఇక్కడ header=1 ఇచ్చాము, కాబట్టి ఆ నంబర్ల రో తొలగిపోయి హెడర్స్ కరెక్ట్ అవుతాయి
     df_auto = pd.read_excel(GITHUB_EXCEL_URL, sheet_name=0, header=1)
 
-    # 1. Unnamed/ఖాళీ కాలమ్స్‌ని పూర్తిగా తొలగించడానికి
+    # 1. Unnamed/ఖాళీ కాలమ్స్‌ని తొలగించడం
     df_auto = df_auto.loc[
         :, ~df_auto.columns.astype(str).str.contains("^Unnamed", case=False)
     ]
 
-    # 2. 'Received Qty' కాలమ్ ఉంటే దాన్ని తొలగించడానికి
+    # 2. 'Received Qty' కాలమ్ ఉంటే తొలగించడం
     recv_col = find_column(df_auto, ["Received Qty"])
     if recv_col:
       df_auto = df_auto.drop(columns=[recv_col])
 
-    # 3. తేదీలలో 00:00:00 తీసివేయడానికి
+    # 3. 00:00:00 టైమ్‌ను పూర్తిగా తొలగించి కేవలం తేదీ (YYYY-MM-DD) మాత్రమే ఉంచడానికి కోడ్
     for col in df_auto.columns:
       if "date" in str(col).lower() or "dt" in str(col).lower():
-        df_auto[col] = pd.to_datetime(df_auto[col], errors="coerce").dt.date
+        df_auto[col] = (
+            pd.to_datetime(df_auto[col], errors="coerce")
+            .dt.strftime("%Y-%m-%d")
+            .fillna("")
+        )
+        # ఒకవేళ నాట్-అప్లికబుల్ లేదా రాని చోట్ల 'NaT' లేదా '00:00:00' ఉంటే క్లీన్ చేయడానికి:
+        df_auto[col] = df_auto[col].replace("NaT", "").replace("NaN", "")
+      else:
+        # ఇతర కాలమ్స్‌లో ఎక్కడైనా '00:00:00' వస్తే దాన్ని ఖాళీగా లేదా క్లియర్ చేయడానికి
+        df_auto[col] = (
+            df_auto[col]
+            .astype(str)
+            .str.replace("00:00:00", "", regex=False)
+            .str.strip()
+        )
+        df_auto[col] = df_auto[col].replace("nan", "").replace("NaT", "")
 
     st.session_state.current_df = df_auto
   except Exception as e:
