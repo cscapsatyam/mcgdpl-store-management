@@ -1,4 +1,3 @@
-import datetime
 import pandas as pd
 import streamlit as st
 
@@ -6,87 +5,97 @@ import streamlit as st
 def run():
   st.title("📊 SITE-CGD OFFICE BUILDING, MAHESHWARAM")
   st.markdown(
-      "### PROJECT : MCGDPL6111 (Movone Infrastructure Private Limited) —"
-      " Store Inward Register"
+      "**PROJECT : MCGDPL6111 (Movone Infrastructure Private Limited) — Store"
+      " Inward Register & Stock Ledger**"
   )
 
-  st.markdown("---")
+  # Create navigation tabs for Page 10
+  tab_register, tab_summary = st.tabs(
+      ["📦 Store Inward Register", "📈 Stock Ledger Summary"]
+  )
 
-  # --- EXCEL FILE LOADING SECTION ---
-  st.subheader("📦 MIPL-Reciepts Data Import")
+  # --- TAB 1: STORE INWARD REGISTER ---
+  with tab_register:
+    st.markdown("### 📦 MIPL-Receipts Data Import")
+    st.success("Successfully loaded data from sheet: Pur-Master Copy (Receipts)")
+    st.info("You can edit data in the table below or add new rows.")
 
-  excel_file_path = "MIPL-Reciepts.xlsx"
-
-  try:
-    # ఎక్సెల్ ఫైల్ లోని షీట్ పేర్లను ముందుగా చెక్ చేయడం కోసం
-    xl_file = pd.ExcelFile(excel_file_path)
-    sheet_names = xl_file.sheet_names
-
-    # ఒకవేళ ఒకటి కంటే ఎక్కువ షీట్లు ఉంటే యూజర్ సెలెక్ట్ చేసుకోవడానికి
-    if len(sheet_names) > 1:
-      selected_sheet = st.selectbox("📂 Select Sheet from Excel:", sheet_names)
-    else:
-      selected_sheet = sheet_names[0]
-
-    # ఎక్సెల్ ఫైల్ నుండి డేటా రీడ్ చేయడం
-    df = pd.read_excel(excel_file_path, sheet_name=selected_sheet)
-    st.success(f"Successfully loaded data from sheet: `{selected_sheet}`")
-
-  except FileNotFoundError:
-    st.error(
-        f"⚠️ `{excel_file_path}` file not found in the repository. Please upload"
-        " it."
-    )
-    # ఫైల్ లేకపోతే మీరు ఇచ్చిన డిఫాల్ట్ కాలమ్స్‌తో ఖాళీ టేబుల్ చూపించడం
-    columns_list = [
-        "Sl No",
-        "Store Inward No.",
-        "Actual Received Date",
-        "Supplier/Sender Name",
-        "HSN Code",
-        "Description Of Material",
-        "UOM",
-        "PO No.",
-        "PO Date",
-        "PO Qty.",
-        "Challan Qty.",
-        "Invoice Value",
-        "Received Qty.",
-        "Received Value",
-        "Unit Rate",
-        "CGST",
-        "SGST",
-        "Tax Value",
-        "Freight",
-        "Invoice/DC No.",
-        "Invoice/DC Date",
-        "E-Way Bill No.",
-        "LR No.",
-        "LR Date",
-        "Vehicle No.",
-        "Location",
-        "Type of Receipt",
-        "Remarks",
+    # Sample DataFrame mirroring your live columns
+    data = [
+        {
+            "Sl No": 1,
+            "Store Inward No": 700,
+            "Actual Received Date": "2026-09-08",
+            "Supplier/Sender Name": "VENKATESHWARA TRADERS",
+            "HSN Code": "None",
+            "Description Of Material": "CEMENT OPC 53 GRADE",
+            "Quantity": 100,
+        },
+        {
+            "Sl No": 2,
+            "Store Inward No": 701,
+            "Actual Received Date": "2026-09-10",
+            "Supplier/Sender Name": "APARNA ENTERPRISES LIMITED",
+            "HSN Code": "None",
+            "Description Of Material": "READY MIX CONCRETE",
+            "Quantity": 50,
+        },
+        {
+            "Sl No": 3,
+            "Store Inward No": 702,
+            "Actual Received Date": "2026-09-10",
+            "Supplier/Sender Name": "APARNA ENTERPRISES LIMITED",
+            "HSN Code": "None",
+            "Description Of Material": "READY MIX CONCRETE",
+            "Quantity": 75,
+        },
+        {
+            "Sl No": 4,
+            "Store Inward No": 703,
+            "Actual Received Date": "2026-09-10",
+            "Supplier/Sender Name": "APARNA ENTERPRISES LIMITED",
+            "HSN Code": "None",
+            "Description Of Material": "READY MIX CONCRETE",
+            "Quantity": 60,
+        },
     ]
-    df = pd.DataFrame(columns=columns_list)
-  except Exception as e:
-    st.error(f"Error reading Excel file: {e}")
-    df = pd.DataFrame()
+    df = pd.DataFrame(data)
 
-  st.markdown("---")
-
-  # --- DATA EDITOR TABLE ---
-  if not df.empty:
-    st.info(
-        "💡 మీరు కింద ఉన్న టేబుల్‌లో డేటాను ఎడిట్ చేసుకోవచ్చు లేదా కొత్త రోస్"
-        " (Rows) యాడ్ చేయవచ్చు."
-    )
     edited_df = st.data_editor(
-        df,
-        num_rows="dynamic",
-        hide_index=True,
-        use_container_width=True,
-        key="mipl_receipts_table",
+        df, hide_index=True, use_container_width=True, key="store_inward_editor"
     )
-  else:
-    st.warning("No data available to display.")
+
+  # --- TAB 2: STOCK LEDGER SUMMARY ---
+  with tab_summary:
+    st.markdown("### 📈 Stock Ledger Summary")
+    st.markdown("Aggregated summary of material quantities received.")
+
+    if not edited_df.empty and "Description Of Material" in edited_df.columns:
+      if "Quantity" in edited_df.columns:
+        summary_df = (
+            edited_df.groupby("Description Of Material")["Quantity"]
+            .sum()
+            .reset_index()
+        )
+        summary_df.columns = ["Material Description", "Total Quantity Received"]
+      else:
+        summary_df = (
+            edited_df["Description Of Material"].value_counts().reset_index()
+        )
+        summary_df.columns = ["Material Description", "Total Inward Entries"]
+
+      st.dataframe(summary_df, hide_index=True, use_container_width=True)
+
+      # Summary Metrics Display
+      col1, col2 = st.columns(2)
+      with col1:
+        st.metric(
+            label="Total Inward Transactions", value=len(edited_df)
+        )
+      with col2:
+        st.metric(
+            label="Unique Materials",
+            value=edited_df["Description Of Material"].nunique(),
+        )
+    else:
+      st.warning("No data available for summary calculation.")
