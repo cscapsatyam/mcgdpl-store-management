@@ -91,49 +91,46 @@ def run():
       po["Purchase Order No"] for po in st.session_state.po_records
   ]
 
-  # --- TAB 1: MANUAL ENTRY FORM (Auto-fill Supplier & Material from PO) ---
+  # --- TAB 1: MANUAL ENTRY FORM ---
   with tab_entry:
-    st.markdown(
-        "### 📝 Add New Store Inward Entry (Auto-linked with PO Selection)"
+    st.markdown("### 📝 Add New Store Inward Entry")
+
+    # PO selection outside the form to allow dynamic auto-filling without form errors
+    selected_po = st.selectbox(
+        "Select Purchase Order (Optional - Auto-fills Supplier & Material)",
+        po_options,
     )
 
-    # Callback function to auto-update supplier and material when PO is selected
-    def on_po_change():
-      selected = st.session_state.get("selected_po_input", "None / Direct Receipt")
-      if selected != "None / Direct Receipt":
-        matched_po = next(
-            (
-                p
-                for p in st.session_state.po_records
-                if p["Purchase Order No"] == selected
-            ),
-            None,
-        )
-        if matched_po:
-          if matched_po["Supplier Name"] in supplier_options:
-            st.session_state["supplier_select_input"] = matched_po[
-                "Supplier Name"
-            ]
-          if matched_po["Material Description"] in material_options:
-            st.session_state["material_select_input"] = matched_po[
-                "Material Description"
-            ]
+    # Get default values based on selected PO
+    default_supplier = supplier_options[0]
+    default_material = material_options[0]
 
-    with st.form("manual_entry_form", clear_on_submit=False):
+    if selected_po != "None / Direct Receipt":
+      matched_po = next(
+          (
+              p
+              for p in st.session_state.po_records
+              if p["Purchase Order No"] == selected_po
+          ),
+          None,
+      )
+      if matched_po:
+        if matched_po["Supplier Name"] in supplier_options:
+          default_supplier = matched_po["Supplier Name"]
+        if matched_po["Material Description"] in material_options:
+          default_material = matched_po["Material Description"]
+
+    with st.form("manual_entry_form", clear_on_submit=True):
       col1, col2, col3 = st.columns(3)
 
       with col1:
         store_inward_no = st.text_input("Store Inward No")
-        selected_po = st.selectbox(
-            "Select Purchase Order (Optional)",
-            po_options,
-            key="selected_po_input",
-            on_change=on_po_change,
-        )
         supplier_name = st.selectbox(
             "Supplier/Sender Name",
             supplier_options,
-            key="supplier_select_input",
+            index=supplier_options.index(default_supplier)
+            if default_supplier in supplier_options
+            else 0,
         )
         invoice_no = st.text_input("Invoice/Delivery Challan No")
         entry_date = st.date_input("Date", datetime.date.today())
@@ -142,7 +139,9 @@ def run():
         material_desc = st.selectbox(
             "Description Of Material",
             material_options,
-            key="material_select_input",
+            index=material_options.index(default_material)
+            if default_material in material_options
+            else 0,
         )
         uom = st.selectbox(
             "UOM", ["Bags", "Cu.M", "MT", "Nos", "Kgs", "Litres", "Bundles"]
@@ -202,7 +201,7 @@ def run():
             "Remarks": remarks,
         }
         st.session_state.mipl_records.append(new_entry)
-        st.success("Entry added successfully with auto-linked PO details!")
+        st.success("Entry added successfully!")
 
   # --- TAB 2: STORE INWARD REGISTER ---
   with tab_register:
