@@ -41,10 +41,10 @@ def find_column(df, possible_keywords):
   return None
 
 
-# --- Helper Function: PDF A4 Landscape Layout & Perfect Spacing ---
+# --- Helper Function: PDF A4 Landscape Layout & Perfect Pro Spacing ---
 def generate_pdf_download(df, title="Store Inventory Report"):
   buffer = io.BytesIO()
-  # A4 Landscape with spacious margins for clean look
+  # A4 Landscape with spacious margins for clean layout
   doc = SimpleDocTemplate(
       buffer,
       pagesize=landscape(A4),
@@ -66,7 +66,6 @@ def generate_pdf_download(df, title="Store Inventory Report"):
 
   # A4 Landscape width calculation for expanded row/column size
   num_cols = len(df.columns)
-  # Landscape width is roughly 842 points. Margins take 40, leaving ~800 for table.
   col_width = 800 / num_cols if num_cols > 0 else 60
   col_widths = [col_width] * num_cols
 
@@ -79,21 +78,10 @@ def generate_pdf_download(df, title="Store Inventory Report"):
           ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
           ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
           ("FONTSIZE", (0, 0), (-1, -1), 7),  # Clear & readable font size
-          (
-              "BOTTOMPADDING",
-              (0, 0),
-              (-1, -1),
-              6,
-          ),  # Increased row height & spacing
+          ("BOTTOMPADDING", (0, 0), (-1, -1), 6),  # Increased row height
           ("TOPPADDING", (0, 0), (-1, -1), 6),
           ("BACKGROUND", (0, 1), (-1, -1), colors.HexColor("#f8f9fa")),
-          (
-              "GRID",
-              (0, 0),
-              (-1, -1),
-              0.5,
-              colors.HexColor("#bbbbbb"),
-          ),  # Clean visible borders
+          ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#bbbbbb")),
       ])
   )
 
@@ -149,14 +137,8 @@ if "current_df" not in st.session_state:
 
 if st.session_state.current_df.empty:
   try:
-    # 📌 సరైన హెడర్ రో ని పట్టుకోవడానికి header=1 వాడుతున్నాము
-    df_auto = pd.read_excel(GITHUB_EXCEL_URL, sheet_name=0, header=1)
-
-    # మొదటి రో లో ఒకవేళ నంబర్లు ఉంటే వాటిని వదిలి అసలైన హెడర్‌ని సెట్ చేయడం
-    if len(df_auto) > 0:
-      first_col = str(df_auto.columns[0])
-      if first_col.isdigit() or "Unnamed" in first_col:
-        df_auto = pd.read_excel(GITHUB_EXCEL_URL, sheet_name=0, header=2)
+    # 📌 ఎలాంటి ఎక్స్‌ట్రా హెడర్ ఇబ్బందులు లేకుండా నేరుగా ఎక్సెల్ డేటాను రీడ్ చేయడం (header=0)
+    df_auto = pd.read_excel(GITHUB_EXCEL_URL, sheet_name=0, header=0)
 
     # 1. Unnamed ఖాళీ కాలమ్స్‌ని తొలగించడం
     df_auto = df_auto.loc[
@@ -256,7 +238,6 @@ if page == "1. Dashboard / Home":
           use_container_width=True,
       )
 
-    # Increased DataFrame height for clear visibility without crowding
     calc_height = min(max(len(df) * 45 + 50, 200), 650)
     st.dataframe(df, hide_index=True, use_container_width=True, height=calc_height)
   else:
