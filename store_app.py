@@ -41,10 +41,9 @@ def find_column(df, possible_keywords):
   return None
 
 
-# --- Helper Function: PDF A4 Landscape Layout & Perfect Alignment ---
+# --- Helper Function: Clean & Perfect PDF A4 Landscape Layout ---
 def generate_pdf_download(df, title="Store Inventory Report"):
   buffer = io.BytesIO()
-  # A4 Landscape with optimal margins
   doc = SimpleDocTemplate(
       buffer,
       pagesize=landscape(A4),
@@ -59,11 +58,10 @@ def generate_pdf_download(df, title="Store Inventory Report"):
   title_style = styles["Title"]
   title_style.fontSize = 12
   elements.append(Paragraph(f"<b>{title}</b>", title_style))
+  elements.append(Paragraph("<br/>", styles["Normal"]))
 
-  # Data formatting for PDF
   pdf_data = [df.columns.tolist()] + df.astype(str).values.tolist()
 
-  # A4 Landscape total width available roughly is 814 points. Dividing across columns:
   num_cols = len(df.columns)
   col_width = 780 / num_cols if num_cols > 0 else 50
   col_widths = [col_width] * num_cols
@@ -76,9 +74,9 @@ def generate_pdf_download(df, title="Store Inventory Report"):
           ("ALIGN", (0, 0), (-1, -1), "CENTER"),
           ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
           ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
-          ("FONTSIZE", (0, 0), (-1, -1), 5.5),  # Compact font to fit A4
-          ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
-          ("TOPPADDING", (0, 0), (-1, -1), 3),
+          ("FONTSIZE", (0, 0), (-1, -1), 5.5),
+          ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+          ("TOPPADDING", (0, 0), (-1, -1), 4),
           ("BACKGROUND", (0, 1), (-1, -1), colors.HexColor("#f8f9fa")),
           ("GRID", (0, 0), (-1, -1), 0.4, colors.HexColor("#cccccc")),
       ])
@@ -136,18 +134,16 @@ if "current_df" not in st.session_state:
 
 if st.session_state.current_df.empty:
   try:
-    # 📌 మీ ఎక్సెల్ ఫైల్ స్ట్రక్చర్ ప్రకారం హెడర్ రో ఎక్కడ ఉందో ఇక్కడ అడ్జస్ట్ చేసుకోవచ్చు (ఉదాహరణకు header=1 లేదా 2)
-    # ఒకవేళ నంబర్ల రో పోవాలంటే ఎక్సెల్ ఫైల్‌లో నేరుగా రో నంబర్ సెట్ చేయవచ్చు లేదా పైథాన్ ద్వారా ఆ రో ను తొలగించవచ్చు.
-    df_auto = pd.read_excel(GITHUB_EXCEL_URL, sheet_name=0, header=0)
+    # 📌 ఎక్సెల్ ఫైల్‌లో మొదటి రో లో నంబర్లు ఉంటే వాటిని వదిలేయడానికి header=1 వాడుతున్నాము
+    df_auto = pd.read_excel(GITHUB_EXCEL_URL, sheet_name=0, header=1)
 
-    # మొదటి రో లో నంబర్లు ఉంటే వాటిని తొలగించి సరైన హెడర్‌ని సెట్ చేయడానికి:
+    # ఒకవేళ హెడర్ సరిగ్గా రాకపోతే మొదటి రో ని పూర్తిగా తొలగించడం
     if len(df_auto) > 0:
-      first_val = str(df_auto.columns[0])
-      if first_val.isdigit() or "Unnamed" in first_val:
-        # ఒకవేళ మొదటి రో హెడర్ కాకపోతే నెక్స్ట్ రో ని హెడర్‌గా మార్చుకోవడానికి రీ-రీడ్ చేస్తాం
-        df_auto = pd.read_excel(GITHUB_EXCEL_URL, sheet_name=0, header=1)
+      first_col_name = str(df_auto.columns[0])
+      if first_col_name.isdigit() or "Unnamed" in first_col_name:
+        df_auto = pd.read_excel(GITHUB_EXCEL_URL, sheet_name=0, header=2)
 
-    # 1. Unnamed/ఖాళీ కాలమ్స్‌ని పూర్తిగా తొలగించడం
+    # 1. Unnamed ఖాళీ కాలమ్స్‌ని తొలగించడం
     df_auto = df_auto.loc[
         :, ~df_auto.columns.astype(str).str.contains("^Unnamed", case=False)
     ]
@@ -157,9 +153,10 @@ if st.session_state.current_df.empty:
     if recv_col:
       df_auto = df_auto.drop(columns=[recv_col])
 
-    # 3. తేదీలలో 00:00:00 పూర్తిగా తొలగించి కేవలం తేదీ (YYYY-MM-DD) మాత్రమే ఉంచడం
+    # 3. నంబర్స్ / అమౌంట్స్ / డెసిమల్స్ ప్రాబ్లమ్ రాకుండా క్లీన్ చేయడం & రౌండ్ ఆఫ్ చేయడం
     for col in df_auto.columns:
-      if "date" in str(col).lower() or "dt" in str(col).lower():
+      col_lower = str(col).lower()
+      if "date" in col_lower or "dt" in col_lower:
         df_auto[col] = (
             pd.to_datetime(df_auto[col], errors="coerce")
             .dt.strftime("%Y-%m-%d")
@@ -167,13 +164,31 @@ if st.session_state.current_df.empty:
         )
         df_auto[col] = df_auto[col].replace("NaT", "").replace("NaN", "")
       else:
+        # వాల్యూస్ లేదా అమౌంట్ కాలమ్స్‌లో అంకెలు పొడవుగా రాకుండా 2 డెసిమల్స్‌కు రౌండ్ చేయడం
+        try:
+          # ఇది నంబర్ అయితే 2 డెసిమల్స్‌కు మారుస్తుంది
+          numeric_series = pd.to_numeric(df_auto[col], errors="coerce")
+          if (
+              numeric_series.notnull().sum() > 0
+              and "no" not in col_lower
+              and "sl" not in col_lower
+          ):
+            df_auto[col] = numeric_series.round(2).fillna("")
+        except:
+          pass
+
         df_auto[col] = (
             df_auto[col]
             .astype(str)
             .str.replace("00:00:00", "", regex=False)
             .str.strip()
         )
-        df_auto[col] = df_auto[col].replace("nan", "").replace("NaT", "")
+        df_auto[col] = (
+            df_auto[col]
+            .replace("nan", "")
+            .replace("NaT", "")
+            .replace("None", "")
+        )
 
     st.session_state.current_df = df_auto
   except Exception as e:
@@ -304,7 +319,7 @@ elif page == "2. Material Register View":
           .sum()
       )
 
-    if challan_qty_col and challan_qty_col in df.columns:
+    if challan_qty_col and challan_qty_col in df.current_df if hasattr(df, "current_df") else challan_qty_col in df.columns:
       total_qty = (
           pd.to_numeric(
               df[challan_qty_col]
