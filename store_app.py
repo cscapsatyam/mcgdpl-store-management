@@ -81,7 +81,7 @@ def generate_pdf_download(df, title="Store Inventory Report"):
   return buffer.getvalue()
 
 
-# Custom ERP Styling
+# Custom ERP Styling & A4 Print Layout Adjustments
 st.markdown(
     """
     <style>
@@ -108,6 +108,16 @@ st.markdown(
         border-radius: 6px;
         box-shadow: 0 2px 4px rgba(0,0,0,0.05);
     }
+    
+    /* --- Print Styles for A4 Layout --- */
+    @media print {
+        header, footer, nav, .stSidebar, div[data-testid="stSidebar"] {
+            display: none !important;
+        }
+        body {
+            background: white !important;
+        }
+    }
     </style>
     """,
     unsafe_allow_html=True,
@@ -121,7 +131,12 @@ if st.session_state.current_df.empty:
   try:
     df_auto = pd.read_excel(GITHUB_EXCEL_URL, sheet_name=0)
 
-    # --- తేదీలలో ఉన్న 00:00:00 (Time) ను తొలగించి కేవలం Date మాత్రమే ఉంచడానికి కోడ్ ---
+    # 1. Unnamed/ఖాళీ కాలమ్స్‌ని పూర్తిగా తొలగించడానికి (Drop Unnamed Columns)
+    df_auto = df_auto.loc[
+        :, ~df_auto.columns.astype(str).str.contains("^Unnamed", case=False)
+    ]
+
+    # 2. తేదీలలో 00:00:00 తీసివేయడానికి
     for col in df_auto.columns:
       if (
           "date" in str(col).lower()
@@ -132,10 +147,7 @@ if st.session_state.current_df.empty:
 
     st.session_state.current_df = df_auto
   except Exception as e:
-    st.warning(
-        f"GitHub నుండి డేటా లోడ్ కాలేదు: {e}. దయచేసి ఫైల్ పేరు లేదా పాత్ సరిగ్గా"
-        " ఉందో లేదో తనిఖీ చేయండి."
-    )
+    st.warning(f"GitHub నుండి డేటా లోడ్ కాలేదు: {e}")
 
 # --- ERP TOP NAVIGATION TABS ---
 st.markdown(
@@ -201,6 +213,9 @@ if page == "1. Dashboard / Home":
     if uploaded_file is not None:
       try:
         df = pd.read_excel(uploaded_file, sheet_name=0)
+        df = df.loc[
+            :, ~df.columns.astype(str).str.contains("^Unnamed", case=False)
+        ]
         for col in df.columns:
           if (
               "date" in str(col).lower()
