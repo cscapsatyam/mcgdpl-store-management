@@ -10,33 +10,29 @@ def run():
       " Inward Register & Stock Ledger**"
   )
 
-  # Initialize session state for storing records if not already present
+  # Initialize session states if not present
   if "mipl_records" not in st.session_state:
-    st.session_state.mipl_records = [
+    st.session_state.mipl_records = []
+
+  if "po_records" not in st.session_state:
+    st.session_state.po_records = [
         {
             "Sr No": 1,
-            "Store Inward No": "700",
-            "Supplier/Sender Name": "VENKATESHWARA TRADERS",
-            "Invoice/Delivery Challan No": "INV-101",
-            "Date": datetime.date(2026, 9, 8),
-            "Description Of Material": "CEMENT OPC 53 GRADE",
-            "UOM": "Bags",
-            "Received Qty": 100.0,
-            "Basic Rate": 350.0,
-            "CGST+SGST": 63.0,
-            "Freight": 10.0,
-            "Total Invoice Value": 42300.0,
-            "Vehicle No": "TS08AB1234",
-            "Type of Receipt": "Purchase",
-            "Remarks": "Good condition",
+            "Purchase Order No": "PO-2026-001",
+            "Date": datetime.date(2026, 9, 1),
+            "Supplier Name": "VENKATESHWARA TRADERS",
+            "Material Description": "CEMENT OPC 53 GRADE",
+            "Qty of Order": 500.0,
         }
     ]
 
-  tab_entry, tab_register, tab_summary = st.tabs(
+  # Navigation tabs including the new Supplier Order List tab
+  tab_entry, tab_register, tab_summary, tab_po = st.tabs(
       [
           "➕ Manual Entry Form",
           "📦 Store Inward Register",
           "📈 Stock Ledger Summary",
+          "📋 Supplier Order List",
       ]
   )
 
@@ -72,9 +68,10 @@ def run():
         freight = st.number_input(
             "Freight", min_value=0.0, step=0.1, format="%.2f"
         )
-        total_invoice_value = st.number_input(
-            "Total Invoice Value", min_value=0.0, step=0.1, format="%.2f"
-        )
+        calculated_total_value = (received_qty * basic_rate) + cgst_sgst + freight
+        st.markdown(f"**Calculated Total Invoice Value:**")
+        st.info(f"₹ {calculated_total_value:,.2f}")
+
         vehicle_no = st.text_input("Vehicle No")
         type_of_receipt = st.selectbox(
             "Type of Receipt", ["Purchase", "Return", "Transfer", "Sample"]
@@ -97,7 +94,7 @@ def run():
             "Basic Rate": basic_rate,
             "CGST+SGST": cgst_sgst,
             "Freight": freight,
-            "Total Invoice Value": total_invoice_value,
+            "Total Invoice Value": calculated_total_value,
             "Vehicle No": vehicle_no,
             "Type of Receipt": type_of_receipt,
             "Remarks": remarks,
@@ -108,24 +105,27 @@ def run():
   # --- TAB 2: STORE INWARD REGISTER ---
   with tab_register:
     st.markdown("### 📦 Store Inward Register (Editable)")
-    df = pd.DataFrame(st.session_state.mipl_records)
-
-    edited_df = st.data_editor(
-        df,
-        hide_index=True,
-        use_container_width=True,
-        key="mipl_register_editor",
-    )
-    # Update session state with any inline edits made in the table
-    st.session_state.mipl_records = edited_df.to_dict("records")
+    if st.session_state.mipl_records:
+      df = pd.DataFrame(st.session_state.mipl_records)
+      edited_df = st.data_editor(
+          df,
+          hide_index=True,
+          use_container_width=True,
+          key="mipl_register_editor",
+      )
+      st.session_state.mipl_records = edited_df.to_dict("records")
+    else:
+      st.info("No records added yet. Please use the Manual Entry Form tab.")
 
   # --- TAB 3: STOCK LEDGER SUMMARY ---
   with tab_summary:
     st.markdown("### 📈 Stock Ledger Summary")
-
-    current_df = pd.DataFrame(st.session_state.mipl_records)
-    if not current_df.empty and "Description Of Material" in current_df.columns:
-      if "Received Qty" in current_df.columns and "UOM" in current_df.columns:
+    if st.session_state.mipl_records:
+      current_df = pd.DataFrame(st.session_state.mipl_records)
+      if (
+          not current_df.empty
+          and "Description Of Material" in current_df.columns
+      ):
         summary_df = (
             current_df.groupby(["Description Of Material", "UOM"])[
                 "Received Qty"
@@ -138,23 +138,59 @@ def run():
             "UOM",
             "Total Received Qty",
         ]
-      else:
-        summary_df = (
-            current_df["Description Of Material"].value_counts().reset_index()
-        )
-        summary_df.columns = ["Material Description", "Total Inward Entries"]
+        st.dataframe(summary_df, hide_index=True, use_container_width=True)
 
-      st.dataframe(summary_df, hide_index=True, use_container_width=True)
-
-      col1, col2 = st.columns(2)
-      with col1:
-        st.metric(
-            label="Total Inward Transactions", value=len(current_df)
-        )
-      with col2:
-        st.metric(
-            label="Unique Materials",
-            value=current_df["Description Of Material"].nunique(),
-        )
+        col1, col2 = st.columns(2)
+        with col1:
+          st.metric(
+              label="Total Inward Transactions", value=len(current_df)
+          )
+        with col2:
+          st.metric(
+              label="Unique Materials",
+              value=current_df["Description Of Material"].nunique(),
+          )
     else:
       st.warning("No data available to generate summary.")
+
+  # --- TAB 4: SUPPLIER ORDER LIST ---
+  with tab_po:
+    st.markdown("### 📋 Supplier Order List")
+    st.info("Manage and view purchase orders placed with suppliers.")
+
+    # Sub-form or inline editor to add new purchase orders
+    with st.form("po_entry_form", clear_on_submit=True):
+      c1, c2, c3 = st.columns(3)
+      with c1:
+        po_no = st.text_input("Purchase Order No")
+        po_date = st.date_input("PO Date", datetime.date.today())
+      with c2:
+        po_supplier = st.text_input("Supplier Name")
+        po_material = st.text_input("Material Description")
+      with c3:
+        po_qty = st.number_input(
+            "Qty of Order", min_value=0.0, step=0.1, format="%.2f"
+        )
+        st.write("")  # Spacing alignment
+        po_submitted = st.form_submit_button("➕ Add Purchase Order")
+
+      if po_submitted:
+        new_po_sr = len(st.session_state.po_records) + 1
+        new_po = {
+            "Sr No": new_po_sr,
+            "Purchase Order No": po_no,
+            "Date": po_date,
+            "Supplier Name": po_supplier,
+            "Material Description": po_material,
+            "Qty of Order": po_qty,
+        }
+        st.session_state.po_records.append(new_po)
+        st.success("Purchase order added successfully!")
+
+    # Display editable table for PO records
+    if st.session_state.po_records:
+      po_df = pd.DataFrame(st.session_state.po_records)
+      edited_po_df = st.data_editor(
+          po_df, hide_index=True, use_container_width=True, key="po_editor"
+      )
+      st.session_state.po_records = edited_po_df.to_dict("records")
