@@ -18,11 +18,11 @@ def run():
     st.markdown("### 📦 MIPL-Receipts Data Import")
     st.success("Successfully loaded data from sheet: Pur-Master Copy (Receipts)")
     st.info(
-        "You can edit data in the table below (HSN Code removed, UOM"
-        " included)."
+        "You can edit data in the table below. 'Received Qty' and 'UOM' are"
+        " mandatory fields."
     )
 
-    # Updated data structure without HSN Code and with Received Qty and UOM
+    # Data structure with 'Received Qty' and 'UOM' properly defined
     data = [
         {
             "Sl No": 1,
@@ -30,7 +30,7 @@ def run():
             "Actual Received Date": "2026-09-08",
             "Supplier/Sender Name": "VENKATESHWARA TRADERS",
             "Description Of Material": "CEMENT OPC 53 GRADE",
-            "Quantity": 100,
+            "Received Qty": 100,  # Corrected column name
             "UOM": "Bags",
         },
         {
@@ -39,7 +39,7 @@ def run():
             "Actual Received Date": "2026-09-10",
             "Supplier/Sender Name": "APARNA ENTERPRISES LIMITED",
             "Description Of Material": "READY MIX CONCRETE",
-            "Quantity": 50,
+            "Received Qty": 50,
             "UOM": "Cu.M",
         },
         {
@@ -48,7 +48,7 @@ def run():
             "Actual Received Date": "2026-09-10",
             "Supplier/Sender Name": "APARNA ENTERPRISES LIMITED",
             "Description Of Material": "READY MIX CONCRETE",
-            "Quantity": 75,
+            "Received Qty": 75,
             "UOM": "Cu.M",
         },
         {
@@ -57,7 +57,7 @@ def run():
             "Actual Received Date": "2026-09-10",
             "Supplier/Sender Name": "APARNA ENTERPRISES LIMITED",
             "Description Of Material": "READY MIX CONCRETE",
-            "Quantity": 60,
+            "Received Qty": 60,
             "UOM": "Cu.M",
         },
     ]
@@ -75,25 +75,25 @@ def run():
     )
 
     if not edited_df.empty and "Description Of Material" in edited_df.columns:
-      # Group by Material and UOM to accurately sum quantities per unit type
-      if "Quantity" in edited_df.columns and "UOM" in edited_df.columns:
+      # Group by Material Description and UOM using the correct 'Received Qty' column
+      if "Received Qty" in edited_df.columns and "UOM" in edited_df.columns:
         summary_df = (
-            edited_df.groupby(["Description Of Material", "UOM"])["Quantity"]
+            edited_df.groupby(["Description Of Material", "UOM"])["Received Qty"]
             .sum()
             .reset_index()
         )
         summary_df.columns = [
             "Material Description",
             "UOM",
-            "Total Quantity Received",
+            "Total Received Qty",
         ]
-      elif "Quantity" in edited_df.columns:
+      elif "Received Qty" in edited_df.columns:
         summary_df = (
-            edited_df.groupby("Description Of Material")["Quantity"]
+            edited_df.groupby("Description Of Material")["Received Qty"]
             .sum()
             .reset_index()
         )
-        summary_df.columns = ["Material Description", "Total Quantity Received"]
+        summary_df.columns = ["Material Description", "Total Received Qty"]
       else:
         summary_df = (
             edited_df["Description Of Material"].value_counts().reset_index()
