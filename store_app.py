@@ -129,20 +129,22 @@ if "current_df" not in st.session_state:
 
 if st.session_state.current_df.empty:
   try:
-    df_auto = pd.read_excel(GITHUB_EXCEL_URL, sheet_name=0)
+    # 1st row ను headers గా తీసుకుంటున్నాం (అందువల్ల ఎక్సెల్ లోని నంబర్ల రో తొలగిపోతుంది)
+    df_auto = pd.read_excel(GITHUB_EXCEL_URL, sheet_name=0, header=0)
 
-    # 1. Unnamed/ఖాళీ కాలమ్స్‌ని పూర్తిగా తొలగించడానికి (Drop Unnamed Columns)
+    # 1. Unnamed/ఖాళీ కాలమ్స్‌ని పూర్తిగా తొలగించడానికి
     df_auto = df_auto.loc[
         :, ~df_auto.columns.astype(str).str.contains("^Unnamed", case=False)
     ]
 
-    # 2. తేదీలలో 00:00:00 తీసివేయడానికి
+    # 2. 'Received Qty' కాలమ్ ఉంటే దాన్ని తొలగించడానికి (Drop Received Qty Column)
+    recv_col = find_column(df_auto, ["Received Qty"])
+    if recv_col:
+      df_auto = df_auto.drop(columns=[recv_col])
+
+    # 3. తేదీలలో 00:00:00 తీసివేయడానికి
     for col in df_auto.columns:
-      if (
-          "date" in str(col).lower()
-          or "dt" in str(col).lower()
-          or "received" in str(col).lower()
-      ):
+      if "date" in str(col).lower() or "dt" in str(col).lower():
         df_auto[col] = pd.to_datetime(df_auto[col], errors="coerce").dt.date
 
     st.session_state.current_df = df_auto
@@ -199,34 +201,9 @@ if page == "1. Dashboard / Home":
       )
 
     calc_height = min(max(len(df) * 38 + 40, 150), 500)
-    st.data_editor(
-        df,
-        hide_index=True,
-        use_container_width=True,
-        disabled=True,
-        height=calc_height,
-    )
+    st.dataframe(df, hide_index=True, use_container_width=True, height=calc_height)
   else:
-    uploaded_file = st.file_uploader(
-        "📁 Upload Excel Data Source", type=["xlsx", "xls"]
-    )
-    if uploaded_file is not None:
-      try:
-        df = pd.read_excel(uploaded_file, sheet_name=0)
-        df = df.loc[
-            :, ~df.columns.astype(str).str.contains("^Unnamed", case=False)
-        ]
-        for col in df.columns:
-          if (
-              "date" in str(col).lower()
-              or "dt" in str(col).lower()
-              or "received" in str(col).lower()
-          ):
-            df[col] = pd.to_datetime(df[col], errors="coerce").dt.date
-        st.session_state.current_df = df
-        st.rerun()
-      except Exception as e:
-        st.error(f"Error loading file: {e}")
+    st.info("Please load data source first.")
 
 # ================= PAGE 2: MATERIAL REGISTER VIEW =================
 elif page == "2. Material Register View":
@@ -270,7 +247,7 @@ elif page == "2. Material Register View":
       if selected_receipt != "All":
         df = df[df[receipt_col] == selected_receipt]
 
-    # 3. Sub-Totals Calculation
+    # 3. Sub-Totals Calculation (Invoice Value ఆధారంగా)
     total_val_col = find_column(
         df,
         [
@@ -282,8 +259,8 @@ elif page == "2. Material Register View":
             "Value",
         ],
     )
-    qty_col = find_column(
-        df, ["Received Qty", "Invoice/Delivery Challan Qty", "Qty", "Quantity"]
+    challan_qty_col = find_column(
+        df, ["Invoice/Delivery Challan Qty", "Qty", "Quantity"]
     )
 
     sub_total_val = 0.0
@@ -299,10 +276,12 @@ elif page == "2. Material Register View":
           .sum()
       )
 
-    if qty_col and qty_col in df.columns:
+    if challan_qty_col and challan_qty_col in df.columns:
       total_qty = (
           pd.to_numeric(
-              df[qty_col].astype(str).str.replace(r"[^\d.]", "", regex=True),
+              df[challan_qty_col]
+              .astype(str)
+              .str.replace(r"[^\d.]", "", regex=True),
               errors="coerce",
           )
           .fillna(0)
@@ -313,7 +292,7 @@ elif page == "2. Material Register View":
     m1, m2, m3 = st.columns(3)
     m1.metric("Selected Supplier", selected_supplier)
     m2.metric("Sub-Total Value", f"₹ {sub_total_val:,.2f}")
-    m3.metric("Total Received Qty", f"{total_qty:,.2f}")
+    m3.metric("Total Challan Qty", f"{total_qty:,.2f}")
 
     df = df.reset_index(drop=True)
     sl_col = find_column(df, ["Sl No", "S.No", "SlNo", "SNo", "Serial No"])
@@ -340,12 +319,6 @@ elif page == "2. Material Register View":
       )
 
     calc_height = min(max(len(df) * 38 + 40, 150), 500)
-    st.data_editor(
-        df,
-        hide_index=True,
-        use_container_width=True,
-        disabled=True,
-        height=calc_height,
-    )
+    st.dataframe(df, hide_index=True, use_container_width=True, height=calc_height)
   else:
-    st.info("Please upload or load Excel data source first.")
+    st.info("Please load data source first.")
