@@ -7,182 +7,92 @@ def run():
   st.title("📊 SITE-CGD OFFICE BUILDING, MAHRESHWARAM")
   st.markdown(
       "### PROJECT : MCGDPL6111 (Movone Infrastructure Private Limited) —"
-      " Daily Staff & Manpower Report"
+      " Store Inward Register"
   )
 
-  # టాప్ డేట్ మరియు డే డిస్‌ప్లే
-  col_h1, col_h2 = st.columns([2, 1])
-  with col_h1:
-    report_date = st.date_input("📅 Select Report Date:", datetime.date.today())
-  with col_h2:
-    day_name = report_date.strftime("%A")
-    st.info(f"**Day:** {day_name}")
-
   st.markdown("---")
 
-  # క్లీన్ అండ్ పర్ఫెక్ట్ స్పేసింగ్ కోసం కాలమ్స్ రేషియో మార్చాం
-  col1, col2 = st.columns([1, 1.1])
+  # --- STORE INWARD REGISTER DATA TABLE ---
+  st.subheader("📦 Store Inward Details")
 
-  # --- 1. STAFF REPORT SECTION ---
-  with col1:
-    st.subheader("👥 STAFF REPORT")
+  # మీరు ఇచ్చిన కాలమ్స్ తో డిఫాల్ట్ స్ట్రక్చర్
+  columns_list = [
+      "Sl No",
+      "Store Inward No.",
+      "Actual Received Date",
+      "Supplier/Sender Name",
+      "HSN Code",
+      "Description Of Material",
+      "UOM",
+      "PO No.",
+      "PO Date",
+      "PO Qty.",
+      "Challan Qty.",
+      "Invoice Value",
+      "Received Qty.",
+      "Received Value",
+      "Unit Rate",
+      "CGST",
+      "SGST",
+      "Tax Value",
+      "Freight",
+      "Invoice/DC No.",
+      "Invoice/DC Date",
+      "E-Way Bill No.",
+      "LR No.",
+      "LR Date",
+      "Vehicle No.",
+      "Location",
+      "Type of Receipt",
+      "Remarks",
+  ]
 
-    default_staff_data = [
-        {
-            "S.No": 1,
-            "Employee Name": "Mr. M.Sridhar Reddy",
-            "Department": "Site Incharge",
-            "Status": "Present",
-        },
-        {
-            "S.No": 2,
-            "Employee Name": "Mr. Ch.Satish Reddy",
-            "Department": "Stores",
-            "Status": "Present",
-        },
-        {
-            "S.No": 3,
-            "Employee Name": "Mr. J.Srikanth Reddy",
-            "Department": "Admin",
-            "Status": "Present",
-        },
-        {
-            "S.No": 4,
-            "Employee Name": "Mr. G.Laxmana Rao - Sr.Engr",
-            "Department": "Civil",
-            "Status": "Present",
-        },
-        {
-            "S.No": 5,
-            "Employee Name": "Mr. A.Satyanarayana - Executive",
-            "Department": "Stores",
-            "Status": "Present",
-        },
-        {
-            "S.No": 6,
-            "Employee Name": "Mr. D.Veeraiah - GET",
-            "Department": "Civil",
-            "Status": "Present",
-        },
-        {
-            "S.No": 7,
-            "Employee Name": "Mr. B.Shiva - Supervisor",
-            "Department": "Stores",
-            "Status": "Present",
-        },
-        {
-            "S.No": 8,
-            "Employee Name": "Mr. G.Kurma Rao - Electrician",
-            "Department": "Electrician",
-            "Status": "Present",
-        },
-        {
-            "S.No": 9,
-            "Employee Name": "Mr. B.Ramesh -(Tower Crane)",
-            "Department": "Operator",
-            "Status": "Present",
-        },
-    ]
+  # సాంపుల్ డేటా (ఒక రో ఉంచబడింది, అవసరమైతే ఎడిట్ చేసుకోవచ్చు)
+  sample_data = {
+      "Sl No": [1],
+      "Store Inward No.": ["INW-001"],
+      "Actual Received Date": [str(datetime.date.today())],
+      "Supplier/Sender Name": ["ABC Suppliers"],
+      "HSN Code": ["1234"],
+      "DescriptionOfMaterial": ["Cement Bag"],
+      "UOM": ["Bags"],
+      "PO No.": ["PO-101"],
+      "PO Date": [str(datetime.date.today())],
+      "PO Qty.": [100],
+      "Challan Qty.": [100],
+      "Invoice Value": [35000],
+      "Received Qty.": [100],
+      "Received Value": [35000],
+      "Unit Rate": [350],
+      "CGST": [9.0],
+      "SGST": [9.0],
+      "Tax Value": [6300],
+      "Freight": [500],
+      "Invoice/DC No.": ["INV-999"],
+      "Invoice/DC Date": [str(datetime.date.today())],
+      "E-Way Bill No.": ["EWB12345"],
+      "LR No.": ["LR-55"],
+      "LR Date": [str(datetime.date.today())],
+      "Vehicle No.": ["TS08AB1234"],
+      "Location": ["Godown"],
+      "Type of Receipt": ["Purchase"],
+      "Remarks": ["Good Condition"],
+  }
 
-    staff_df = pd.DataFrame(default_staff_data)
+  # పాండాస్ డేటాఫ్రేమ్ క్రియేట్ చేయడం
+  df = pd.DataFrame(columns=columns_list)
 
-    edited_staff_df = st.data_editor(
-        staff_df,
-        hide_index=True,
-        use_container_width=True,
-        height=355,  # పర్ఫెక్ట్ హైట్ సెట్ చేయబడింది
-        key="staff_report_table",
-    )
-
-    staff_total = len(edited_staff_df[edited_staff_df["Status"] == "Present"])
-    st.markdown(f"**STAFF TOTAL (Present):** `{staff_total}`")
-
-  # --- 2. MANPOWER REPORT SECTION ---
-  with col2:
-    st.subheader("👷 MANPOWER REPORT")
-
-    st.markdown("##### 1. Sub-Contractor Manpower")
-    sub_data = [
-        {
-            "Sub-Contractor Details": (
-                "Steel reinforcement, shuttering & concreting"
-            ),
-            "Mr. NVVS Murthi": 13,
-            "Mr. Keshava": 0,
-        }
-    ]
-    sub_df = pd.DataFrame(sub_data)
-    edited_sub_df = st.data_editor(
-        sub_df,
-        hide_index=True,
-        use_container_width=True,
-        height=75,
-        key="sub_contractor_table",
-    )
-
-    st.markdown("##### 2. NMR Manpower")
-    nmr_data = [
-        {
-            "NMR Type": "A. Regular Staff (MD Murshad)",
-            "Mestri": 1,
-            "Helper": 2,
-        },
-        {"NMR Type": "B. Daily Wage (Local)", "Mestri": 0, "Helper": 0},
-    ]
-    nmr_df = pd.DataFrame(nmr_data)
-    edited_nmr_df = st.data_editor(
-        nmr_df,
-        hide_index=True,
-        use_container_width=True,
-        height=95,
-        key="nmr_table",
-    )
-
-    st.markdown("##### 3. Hired Vehicle Details")
-    vehicle_data = [
-        {"Vehicle Type": "A. Hydra", "Helper": 0, "Operator": 0},
-        {"Vehicle Type": "B. JCB", "Helper": 0, "Operator": 0},
-        {"Vehicle Type": "C. Tractor", "Helper": 0, "Operator": 0},
-        {"Vehicle Type": "D. Rollers", "Helper": 0, "Operator": 0},
-    ]
-    vehicle_df = pd.DataFrame(vehicle_data)
-    edited_vehicle_df = st.data_editor(
-        vehicle_df,
-        hide_index=True,
-        use_container_width=True,
-        height=140,
-        key="vehicle_table",
-    )
-
-    st.markdown("##### 4. Security Details")
-    security_data = [
-        {"Security Details": "A. Supervisor", "Day": 1, "Night": 1},
-        {"Security Details": "B. Guards", "Day": 1, "Night": 1},
-    ]
-    security_df = pd.DataFrame(security_data)
-    edited_security_df = st.data_editor(
-        security_df,
-        hide_index=True,
-        use_container_width=True,
-        height=95,
-        key="security_table",
-    )
-
-    sub_manpower_total = (
-        edited_sub_df["Mr. NVVS Murthi"].sum()
-        + edited_sub_df["Mr. Keshava"].sum()
-        + edited_nmr_df["Mestri"].sum()
-        + edited_nmr_df["Helper"].sum()
-        + edited_security_df["Day"].sum()
-        + edited_security_df["Night"].sum()
-    )
-    st.markdown(f"**MANPOWER SUBTOTAL:** `{sub_manpower_total}`")
+  # యూజర్ ఎడిట్ చేసుకునేలా టేబుల్ చూపించడం
+  edited_df = st.data_editor(
+      df,
+      num_rows="dynamic",  # కొత్త రోస్ యాడ్ చేసుకోవడానికి అవకాశం ఉంటుంది
+      hide_index=True,
+      use_container_width=True,
+      key="store_inward_table",
+  )
 
   st.markdown("---")
-
-  # --- TOTAL HEADCOUNT SUMMARY ---
-  total_headcount = staff_total + sub_manpower_total
-
-  st.success(
-      f"### 🎯 TOTAL HEADCOUNT (STAFF & MANPOWER): **{total_headcount}**"
+  st.info(
+      "💡 మీరు పైన ఉన్న టేబుల్‌లో నేరుగా డేటాను టైప్ చేయవచ్చు లేదా కొత్త రోస్"
+      " (Rows) యాడ్ చేసుకోవచ్చు."
   )
