@@ -10,7 +10,10 @@ def run():
       " Inward Register & Stock Ledger**"
   )
 
-  if "mipl_records" not in st.session_state:
+  # Reset/Clean records if old corrupted schema is detected
+  if "mipl_records" not in st.session_state or any(
+      "CGST+SGST (%)" not in r for r in st.session_state.mipl_records
+  ):
     st.session_state.mipl_records = []
 
   supplier_options = (
@@ -43,7 +46,7 @@ def run():
       col1, col2, col3 = st.columns(3)
 
       with col1:
-        store_inward_no = st.text_input("Store Inward No", value="800")
+        store_inward_no = st.text_input("Store Inward No")
         supplier_name = st.selectbox("Supplier/Sender Name", supplier_options)
         invoice_no = st.text_input("Invoice/Delivery Challan No")
         entry_date = st.date_input("Date", datetime.date.today())
@@ -54,13 +57,11 @@ def run():
             "UOM", ["Bags", "Cu.M", "MT", "Nos", "Kgs", "Litres", "Bundles"]
         )
         received_qty = st.number_input(
-            "Received Qty", min_value=0.0, step=0.1, value=50.0, format="%.2f"
+            "Received Qty", min_value=0.0, step=0.1, format="%.2f"
         )
         basic_rate = st.number_input(
-            "Basic Rate", min_value=0.0, step=0.1, value=255.0, format="%.2f"
+            "Basic Rate", min_value=0.0, step=0.1, format="%.2f"
         )
-
-        # CGST + SGST Percentage Input
         tax_percentage = st.number_input(
             "CGST + SGST (%)",
             min_value=0.0,
@@ -71,10 +72,9 @@ def run():
 
       with col3:
         freight = st.number_input(
-            "Freight", min_value=0.0, step=0.1, value=500.0, format="%.2f"
+            "Freight", min_value=0.0, step=0.1, format="%.2f"
         )
 
-        # CORRECT CALCULATION LOGIC
         base_amount = received_qty * basic_rate
         tax_amount = base_amount * (tax_percentage / 100.0)
         calculated_total_value = base_amount + tax_amount + freight
@@ -128,7 +128,10 @@ def run():
       )
       st.session_state.mipl_records = edited_df.to_dict("records")
     else:
-      st.info("No records added yet.")
+      st.info(
+          "No records found. Please add a new entry using the Manual Entry Form"
+          " tab."
+      )
 
   # --- TAB 3: STOCK LEDGER SUMMARY ---
   with tab_summary:
